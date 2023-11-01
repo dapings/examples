@@ -51,7 +51,6 @@ const (
 
 var (
 	mode uint8
-	str  string
 )
 
 func init() {

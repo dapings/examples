@@ -4,6 +4,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	str string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "",
 	Short: "",
@@ -17,4 +21,5 @@ func Execute() error {
 func init() {
 	rootCmd.AddCommand(wordCmd)
 	rootCmd.AddCommand(timeCmd)
+	rootCmd.AddCommand(jsonCmd)
 }
