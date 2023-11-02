@@ -11,12 +11,12 @@ create table `blog_tag` (
     `created_on` int(10) unsigned default '0' comment '创建时间',
     `modified_on` int(10) unsigned default '0' comment '创建时间',
     `deleted_on` int(10) unsigned default '0' comment '创建时间',
-    `is_deleted` tinyint(1) unsigned DEFAULT '0' COMMENT '是否删除 0 未删除、1 已删除',
+    `is_deleted` tinyint(1) unsigned default '0' comment '是否删除 0 未删除、1 已删除',
     `created_by` varchar(128) default '' comment '创建人',
     `modified_by` varchar(128) default '' comment '修改人',
-    `status` tinyint(1) unsigned DEFAULT '1' COMMENT '状态 0 禁用、1 启用',
+    `status` tinyint(1) unsigned default '1' comment '状态 0 禁用、1 启用',
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标签管理';
+) ENGINE=InnoDB default CHARSET=utf8mb4 comment='标签管理';
 
 drop table if exists `blog_article`;
 create table `blog_article` (
@@ -28,12 +28,12 @@ create table `blog_article` (
     `created_on` int(10) unsigned default '0' comment '创建时间',
     `modified_on` int(10) unsigned default '0' comment '创建时间',
     `deleted_on` int(10) unsigned default '0' comment '创建时间',
-    `is_deleted` tinyint(1) unsigned DEFAULT '0' COMMENT '是否删除 0 未删除、1 已删除',
+    `is_deleted` tinyint(1) unsigned default '0' comment '是否删除 0 未删除、1 已删除',
     `created_by` varchar(128) default '' comment '创建人',
     `modified_by` varchar(128) default '' comment '修改人',
-    `status` tinyint(1) unsigned DEFAULT '1' COMMENT '状态 0 禁用、1 启用',
+    `status` tinyint(1) unsigned default '1' comment '状态 0 禁用、1 启用',
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章管理';
+) ENGINE=InnoDB default CHARSET=utf8mb4 comment='文章管理';
 
 drop table if exists `blog_article_tag`;
 create table `blog_article_tag` (
@@ -43,8 +43,8 @@ create table `blog_article_tag` (
     `created_on` int(10) unsigned default '0' comment '创建时间',
     `modified_on` int(10) unsigned default '0' comment '创建时间',
     `deleted_on` int(10) unsigned default '0' comment '创建时间',
-    `is_deleted` tinyint(1) unsigned DEFAULT '0' COMMENT '是否删除 0 未删除、1 已删除',
+    `is_deleted` tinyint(1) unsigned default '0' comment '是否删除 0 未删除、1 已删除',
     `created_by` varchar(128) default '' comment '创建人',
     `modified_by` varchar(128) default '' comment '修改人',
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章标签关联';
+) ENGINE=InnoDB default CHARSET=utf8mb4 comment='文章标签关联';

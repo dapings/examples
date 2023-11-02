@@ -2,16 +2,21 @@ package main
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers"
 )
 
 func main() {
-	r := gin.Default()
-	r.GET("/ping", func(ctx *gin.Context) {
-		ctx.JSONP(http.StatusOK, gin.H{"message": "pong"})
-	})
-	_ = r.Run()
+	router := routers.NewRouter()
+	s := &http.Server{
+		Addr:           ":8080",
+		Handler:        router,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+	_ = s.ListenAndServe()
 }
 
 var (
