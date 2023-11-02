@@ -39,7 +39,7 @@ var (
 )
 
 func setupSetting() error {
-	s, err := setting.NewSetting()
+	s, err := setting.NewSetting("configs")
 	if err != nil {
 		return err
 	}
