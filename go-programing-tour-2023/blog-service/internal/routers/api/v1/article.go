@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/app"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/errcode"
 	"github.com/gin-gonic/gin"
 )
 
@@ -11,7 +13,8 @@ func NewArticle() Article {
 }
 
 func (a Article) Get(ctx *gin.Context) {
-
+	app.NewRes(ctx).ToErrRes(errcode.ServerError)
+	return
 }
 
 func (a Article) List(ctx *gin.Context) {
