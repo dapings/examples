@@ -1,7 +1,10 @@
 package model
 
 import (
+	"errors"
+
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/app"
+	"github.com/jinzhu/gorm"
 )
 
 type Tag struct {
@@ -17,4 +20,67 @@ func (t Tag) TableName() string {
 type TagSwagger struct {
 	List  []*Tag
 	Pager *app.Pager
+}
+
+func (t Tag) Count(db *gorm.DB) (int, error) {
+	var count int
+	if t.Name != "" {
+		db = db.Where("name = ?", t.Name)
+	}
+	db = db.Where("status = ?", t.State)
+	if err := db.Model(&t).Where("is_deleted = ?", 0).Count(&count).Error; err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (t Tag) List(db *gorm.DB, pageOffset, pageSize int) ([]*Tag, error) {
+	var tags []*Tag
+	var err error
+	if pageOffset >= 0 && pageSize > 0 {
+		db = db.Offset(pageOffset).Limit(pageSize)
+	}
+	if t.Name != "" {
+		db = db.Where("name = ?", t.Name)
+	}
+	db = db.Where("status = ?", t.State)
+	if err = db.Where("is_deleted = ?", 0).Find(&tags).Error; err != nil {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+func (t Tag) ListByIDs(db *gorm.DB, ids []uint32) ([]*Tag, error) {
+	var tags []*Tag
+	db = db.Where("status = ? AND is_deleted = ?", t.State, 0)
+	err := db.Where("id IN (?)", ids).Find(&tags).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	return tags, nil
+}
+
+func (t Tag) Get(db *gorm.DB) (Tag, error) {
+	var tag Tag
+	err := db.Where("id = ? AND is_deleted = ? AND status = ?", t.ID, 0, t.State).First(&tag).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return tag, err
+	}
+
+	return tag, nil
+}
+
+func (t Tag) Create(db *gorm.DB) error {
+	return db.Create(&t).Error
+}
+
+func (t Tag) Update(db *gorm.DB, values interface{}) error {
+	return db.Model(&t).Where("id = ? AND is_deleted = ?", t.ID, 0).Updates(values).Error
+}
+
+func (t Tag) Delete(db *gorm.DB) error {
+	return db.Where("id = ? AND is_deleted = ?", t.Model.ID, 0).Delete(&t).Error
 }
