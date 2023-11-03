@@ -1,18 +1,22 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
-	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/model"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/logger"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/setting"
 	"github.com/gin-gonic/gin"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 func main() {
+	global.Logger.Infof(context.TODO(), "%s : go-programming/blog", "blog-service")
 	gin.SetMode(global.ServerSetting.RunMode)
 	router := routers.NewRouter()
 	s := &http.Server{
@@ -34,6 +38,11 @@ func init() {
 	err = setupDBEngine()
 	if err != nil {
 		log.Fatalf("init.setupDBEngine err: %v", err)
+	}
+
+	err = setupLogger()
+	if err != nil {
+		log.Fatalf("init.setupLogger err: %v", err)
 	}
 }
 
@@ -72,9 +81,22 @@ func setupDBEngine() error {
 	// 注：:= 会重新声明并创建左侧的新局部变量，因此在其他包调用变量时，仍然是 nil，达不到可用标准
 	// 在赋值时并没有赋值到真正需要赋值的变量上
 	var err error
-	global.DBEngine, err = model.NewDBEngine(global.DatabaseSetting)
+	// global.DBEngine, err = model.NewDBEngine(global.DatabaseSetting)
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func setupLogger() error {
+	fileName := filepath.Join(global.AppSetting.LogSavePath, global.AppSetting.LogFileName+global.AppSetting.LogFileExt)
+	global.Logger = logger.NewLogger(&lumberjack.Logger{
+		Filename:   fileName,
+		MaxSize:    500,
+		MaxAge:     10,
+		MaxBackups: 15,
+		LocalTime:  true,
+		Compress:   false,
+	}, "", log.LstdFlags).WithCaller(2)
 	return nil
 }
