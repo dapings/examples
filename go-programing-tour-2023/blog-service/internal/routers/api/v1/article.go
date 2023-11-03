@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/app"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/errcode"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,8 +20,8 @@ func NewArticle() Article {
 // @Failure 500 {object} errcode.Error "内部错误"
 // @Router /api/v1/articles/{id} [get]
 func (a Article) Get(ctx *gin.Context) {
-	// app.NewRes(ctx).ToErrRes(errcode.ServerError)
-	// return
+	app.NewRes(ctx).ToErrRes(errcode.ServerError)
+	return
 }
 
 // @Summary 获取多个文章

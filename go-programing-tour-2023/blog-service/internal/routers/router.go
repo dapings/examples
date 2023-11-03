@@ -3,6 +3,7 @@ package routers
 import (
 	"net/http"
 
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/middleware"
 	v1 "github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api/v1"
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +12,7 @@ func NewRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	r.Use(middleware.Translations())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSONP(http.StatusOK, gin.H{"message": "pong"})

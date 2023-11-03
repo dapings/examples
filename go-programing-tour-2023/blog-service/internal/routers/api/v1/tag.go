@@ -1,6 +1,9 @@
 package v1
 
 import (
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/app"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/errcode"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,7 +24,20 @@ func NewTag() Tag {
 // @Failure 500 {object} errcode.Error "内部错误"
 // @Router /api/v1/tags [get]
 func (t Tag) List(ctx *gin.Context) {
-
+	param := struct {
+		Name  string `form:"name" binding:"max=100"`
+		State uint8  `form:"state,default=1" binding:"oneof=0 1"`
+	}{}
+	resp := app.NewRes(ctx)
+	valid, errs := app.BindAndValid(ctx, &param)
+	if !valid {
+		global.Logger.Errorf(ctx, "app.BindAndValid errs: %v", errs)
+		errResp := errcode.InvalidParams.WithDetails(errs.Errors()...)
+		resp.ToErrRes(errResp)
+		return
+	}
+	resp.ToRes(&gin.H{})
+	return
 }
 
 // @Summary 新增标签
