@@ -15,6 +15,10 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
+// @title 博客系统
+// @version 1.0
+// @description Go 语言 blog service
+// @termsOfService https://github.com/dapings/examples
 func main() {
 	global.Logger.Infof(context.TODO(), "%s : go-programming/blog", "blog-service")
 	gin.SetMode(global.ServerSetting.RunMode)
