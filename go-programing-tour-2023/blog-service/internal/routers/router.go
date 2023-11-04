@@ -28,6 +28,7 @@ func NewRouter() *gin.Engine {
 	r.GET("/auth", api.GetAuth)
 
 	apiV1 := r.Group("/api/v1")
+	apiV1.Use(middleware.JWT())
 	{
 		tag := v1.NewTag()
 		apiV1.POST("/tags", tag.Create)
