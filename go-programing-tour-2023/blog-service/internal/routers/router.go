@@ -3,6 +3,7 @@ package routers
 import (
 	"net/http"
 
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/middleware"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api"
 	v1 "github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api/v1"
@@ -21,6 +22,8 @@ func NewRouter() *gin.Engine {
 
 	upload := api.NewUpload()
 	r.POST("/upload/file", upload.UploadFile)
+	// 注：应当将文件服务和应用服务分开，因为从安全角度，文件资源不应当于应用资源在一起，或直接使用 oss 也是可以的。
+	r.StaticFS("/static", http.Dir(global.AppSetting.UploadSavePath))
 
 	apiV1 := r.Group("/api/v1")
 	{
