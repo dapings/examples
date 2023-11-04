@@ -24,6 +24,8 @@ func NewRouter() *gin.Engine {
 	r.POST("/upload/file", upload.UploadFile)
 	// 注：应当将文件服务和应用服务分开，因为从安全角度，文件资源不应当于应用资源在一起，或直接使用 oss 也是可以的。
 	r.StaticFS("/static", http.Dir(global.AppSetting.UploadSavePath))
+	// 获取 JWT Token
+	r.GET("/auth", api.GetAuth)
 
 	apiV1 := r.Group("/api/v1")
 	{

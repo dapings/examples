@@ -17,10 +17,14 @@ App:
     - .jpg
     - .jpeg
     - .png
+JWT:
+  Secret: blog_202311
+  Issuer: blog-service
+  Expire: 7200
 Database:
   DBType: mysql
   UserName: root
-  Password: rootroot
+  Password: blog_202311
   Host: 127.0.0.1:3306
   DBName: blog_service
   TablePrefix: blog_

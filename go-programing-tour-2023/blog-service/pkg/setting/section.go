@@ -24,6 +24,12 @@ type AppSettingS struct {
 	UploadImageAllowExts  []string
 }
 
+type JWTSettingS struct {
+	Secret string
+	Issuer string
+	Expire time.Duration
+}
+
 type DatabaseSettingS struct {
 	DBType       string
 	UserName     string
