@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/middleware"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api"
 	v1 "github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api/v1"
 	"github.com/gin-gonic/gin"
 )
@@ -17,6 +18,9 @@ func NewRouter() *gin.Engine {
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSONP(http.StatusOK, gin.H{"message": "pong"})
 	})
+
+	upload := api.NewUpload()
+	r.POST("/upload/file", upload.UploadFile)
 
 	apiV1 := r.Group("/api/v1")
 	{
