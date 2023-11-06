@@ -30,6 +30,16 @@ type JWTSettingS struct {
 	Expire time.Duration
 }
 
+type EmailSettingS struct {
+	Host     string
+	Port     int
+	IsSSL    bool
+	UserName string
+	Password string
+	From     string
+	To       []string
+}
+
 type DatabaseSettingS struct {
 	DBType       string
 	UserName     string

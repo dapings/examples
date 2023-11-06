@@ -17,6 +17,16 @@ App:
     - .jpg
     - .jpeg
     - .png
+Email:
+  Host: smtp.qq.com
+  # 默认 25 端口被云商默认封禁，并不可解封
+  Port: 465
+  UserName: xxx
+  Password: xxx
+  IsSSL: true
+  From: xxx
+  To:
+    - xxx
 JWT:
   Secret: blog_202311
   Issuer: blog-service
