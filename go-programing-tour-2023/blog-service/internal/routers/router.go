@@ -24,6 +24,7 @@ func NewRouter() *gin.Engine {
 	r.Use(middleware.RateLimiter(methodLimiters))
 	r.Use(middleware.CtxTimeout(global.AppSetting.DefaultContextTimeout))
 	r.Use(middleware.Translations())
+	r.Use(middleware.Tracing())
 
 	r.GET("/ping", func(ctx *gin.Context) {
 		ctx.JSONP(http.StatusOK, gin.H{"message": "pong"})
