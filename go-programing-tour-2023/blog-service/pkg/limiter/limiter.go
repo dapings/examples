@@ -11,7 +11,7 @@ import (
 
 // LimiterIface 通用接口，限流器必须的方法
 type LimiterIface interface {
-	Key(ctx *gin.Context)
+	Key(ctx *gin.Context) string
 	GetBucket(key string) (*ratelimit.Bucket, bool)
 	AddBucket(rules ...LimiterBucketRule) LimiterIface
 }

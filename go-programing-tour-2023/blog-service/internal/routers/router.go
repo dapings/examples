@@ -2,18 +2,27 @@ package routers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/middleware"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api"
 	v1 "github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/routers/api/v1"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/limiter"
 	"github.com/gin-gonic/gin"
 )
 
 func NewRouter() *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	if global.ServerSetting.RunMode == "debug" {
+		r.Use(gin.Logger())
+		r.Use(gin.Recovery())
+	} else {
+		r.Use(middleware.AccessLog())
+		r.Use(middleware.Recovery())
+	}
+	r.Use(middleware.RateLimiter(methodLimiters))
+	r.Use(middleware.CtxTimeout(global.AppSetting.DefaultContextTimeout))
 	r.Use(middleware.Translations())
 
 	r.GET("/ping", func(ctx *gin.Context) {
@@ -48,3 +57,10 @@ func NewRouter() *gin.Engine {
 
 	return r
 }
+
+var methodLimiters = limiter.NewMethodLimiter().AddBucket(limiter.LimiterBucketRule{
+	Key:          "/auth",
+	FillInterval: time.Second,
+	Capacity:     10,
+	Quantum:      10,
+})
