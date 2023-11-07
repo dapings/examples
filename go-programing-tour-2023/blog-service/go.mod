@@ -3,6 +3,7 @@ module github.com/dapings/examples/go-programing-tour-2023/blog-service
 go 1.20
 
 require (
+	github.com/eddycjy/opentracing-gorm v0.0.0-20200209122056-516a807d2182
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
@@ -50,6 +51,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/sagikazarmark/locafero v0.3.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/smacker/opentracing-gorm v0.0.0-20181207094635-cd4974441042 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect

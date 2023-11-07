@@ -6,6 +6,7 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/setting"
+	otgorm "github.com/eddycjy/opentracing-gorm"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
@@ -49,6 +50,8 @@ func NewDBEngine(dbSetting *setting.DatabaseSettingS) (*gorm.DB, error) {
 	db.Callback().Delete().Replace("gorm:delete", deleteCallback)
 	db.DB().SetMaxIdleConns(dbSetting.MaxIdleConns)
 	db.DB().SetMaxOpenConns(dbSetting.MaxOpenConns)
+	// callback 注册
+	otgorm.AddGormCallbacks(db)
 	return db, nil
 }
 
