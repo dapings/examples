@@ -9,6 +9,7 @@ require (
 	github.com/go-playground/validator/v10 v10.14.0
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jinzhu/gorm v1.9.16
+	github.com/juju/ratelimit v1.0.2
 	github.com/spf13/viper v1.17.0
 	github.com/swaggo/swag v1.16.2
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
