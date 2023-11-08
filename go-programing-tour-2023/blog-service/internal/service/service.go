@@ -5,7 +5,7 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/internal/dao"
-	otgorm "github.com/eddycjy/opentracing-gorm"
+	otgorm "github.com/dapings/opentracing-gorm"
 )
 
 type Service struct {

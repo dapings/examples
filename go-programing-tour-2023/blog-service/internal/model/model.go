@@ -6,14 +6,14 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/setting"
-	otgorm "github.com/eddycjy/opentracing-gorm"
+	otgorm "github.com/dapings/opentracing-gorm"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 const (
-	STATE_CLOSE = iota
-	STATE_OPEN
+	StateClose = iota
+	StateOpen
 )
 
 type Model struct {
@@ -51,7 +51,7 @@ func NewDBEngine(dbSetting *setting.DatabaseSettingS) (*gorm.DB, error) {
 	db.DB().SetMaxIdleConns(dbSetting.MaxIdleConns)
 	db.DB().SetMaxOpenConns(dbSetting.MaxOpenConns)
 	// callback 注册
-	otgorm.AddGormCallbacks(db)
+	otgorm.AddGORMCallbacks(db)
 	return db, nil
 }
 
