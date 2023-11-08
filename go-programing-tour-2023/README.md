@@ -32,6 +32,20 @@
    - 常见应用中间件
    - 链路追踪
    - 应用配置问题
+     1. 命令行参数
+     2. 系统环境变量
+        也可以将配置文件存放在系统自带的全局变量中，如$HOME/conf或/etc/conf中，好处是不需要重新自定义一个新的系统环境变更
+        内置一些系统环境变量的读取，优先级低于命令行参数，但高于文件配置。
+     3. 打包进二进制文件中
+        或者将配置文件打包到二进制文件中，通过 go-bindata 库可以将数据文件转换为Go代码，就可以摆脱静态资源文件了。
+        ```shell
+         go get -u github.com/go-bindata/go-bindata/...
+         go-bindata -o configs/config.go -pkg=configs configs/config.yaml
+         # 执行如下代码，读取对应的文件内容
+         b, _ := configs.Assert("configs/config.yaml")
+        ```
+     4. 其他方案
+        或直接使用集中式的配置中心。
    - 编译程序应用
    - 优雅重启和停止
    - 思考

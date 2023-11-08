@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
@@ -35,7 +37,11 @@ func main() {
 }
 
 func init() {
-	err := setupSetting()
+	err := setupFlag()
+	if err != nil {
+		log.Fatalf("init.setupFlag err: %v", err)
+	}
+	err = setupSetting()
 	if err != nil {
 		log.Fatalf("init.setupSetting err: %v", err)
 	}
@@ -64,7 +70,11 @@ var (
 )
 
 func setupSetting() error {
-	s, err := setting.NewSetting("configs")
+	// 也可以将配置文件存放在系统自带的全局变量中，如$HOME/conf或/etc/conf中，好处是不需要重新自定义一个新的系统环境变更
+	// 内置一些系统环境变量的读取，优先级低于命令行参数，但高于文件配置。
+	// 或者将配置文件打包到二进制文件中，通过 go-bindata 库可以将数据文件转换为Go代码，就可以摆脱静态资源文件了。
+	// 或直接使用集中式的配置中心。
+	s, err := setting.NewSetting(strings.Split(config, ",")...)
 	if err != nil {
 		return err
 	}
@@ -90,9 +100,17 @@ func setupSetting() error {
 		return err
 	}
 
+	global.AppSetting.DefaultContextTimeout *= time.Second
 	global.JWTSetting.Expire *= time.Second
 	global.ServerSetting.ReadTimeout *= time.Second
 	global.ServerSetting.WriteTimeout *= time.Second
+	// 如果存在，则覆盖原有的文件配置
+	if port != "" {
+		global.ServerSetting.HttpPort = port
+	}
+	if runMode != "" {
+		global.ServerSetting.RunMode = runMode
+	}
 	return nil
 }
 
@@ -126,5 +144,16 @@ func setupTracer() error {
 		return err
 	}
 	global.Tracer = jaegerTracer
+	return nil
+}
+
+func setupFlag() error {
+	// 如果存在命令行参数，则优先使用命令行参数，否则使用配置文件中的配置参数
+	flag.StringVar(&port, "port", "", "启动端口")
+	flag.StringVar(&runMode, "mode", "", "启动模式")
+	flag.StringVar(&config, "config", "configs/", "指定要使用的配置文件路径，以逗号(,)分隔")
+	flag.BoolVar(&isVersion, "version", false, "编译信息")
+	flag.Parse()
+
 	return nil
 }
