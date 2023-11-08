@@ -14,7 +14,9 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/logger"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/setting"
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/tracer"
+	"github.com/dapings/examples/go-programing-tour-2023/blog-service/pkg/validator"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
@@ -56,6 +58,11 @@ func init() {
 		log.Fatalf("init.setupLogger err: %v", err)
 	}
 
+	err = setupValidator()
+	if err != nil {
+		log.Fatalf("init.setupValidator err: %v", err)
+	}
+
 	err = setupTracer()
 	if err != nil {
 		log.Fatalf("init.setupTracer err: %v", err)
@@ -67,6 +74,11 @@ var (
 	runMode   string
 	config    string
 	isVersion bool
+	// -ldflags -X 参数，将信息写入变量中，格式为 package_name.variable_name=value
+	// 构建信息：go build -ldflags -n -l "-X main.buildTime=`data +%Y-%m-%d %H%M%S` -X main.buildVersion=v1.0.1 -X main.gitCommitID=`git rev-parse HEAD`"
+	buildTime    string
+	buildVersion string
+	gitCommitID  string
 )
 
 func setupSetting() error {
@@ -155,5 +167,12 @@ func setupFlag() error {
 	flag.BoolVar(&isVersion, "version", false, "编译信息")
 	flag.Parse()
 
+	return nil
+}
+
+func setupValidator() error {
+	global.Validator = validator.NewCustomValidator()
+	global.Validator.Engine()
+	binding.Validator = global.Validator
 	return nil
 }
