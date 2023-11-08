@@ -2,11 +2,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/blog-service/global"
@@ -25,7 +30,14 @@ import (
 // @description Go 语言 blog service
 // @termsOfService https://github.com/dapings/examples
 func main() {
-	global.Logger.Infof(context.TODO(), "%s : go-programming/blog", "blog-service")
+	topCtx := context.Background()
+	global.Logger.Infof(topCtx, "%s : go-programming/blog", "blog-service")
+	if isVersion {
+		fmt.Printf("build_time: %s\n", buildTime)
+		fmt.Printf("build_version: %s\n", buildVersion)
+		fmt.Printf("git_commit_id: %s\n", gitCommitID)
+		return
+	}
 	gin.SetMode(global.ServerSetting.RunMode)
 	router := routers.NewRouter()
 	s := &http.Server{
@@ -35,7 +47,29 @@ func main() {
 		WriteTimeout:   global.ServerSetting.WriteTimeout,
 		MaxHeaderBytes: 1 << 20,
 	}
-	_ = s.ListenAndServe()
+
+	// 通过信号量的方式来解决问题：优雅重启和停止
+	// 信号量是一种异步通知机制，用来提醒进程一个事件(硬件异常、程序执行异常、外部发生信息)已发生。如果进程定义的信号的处理函数，那么它将被执行，否则执行默认的处理函数。
+	// kill -l 查看系统所支持的所有信息，SIGINT 进程结束，SIGTSTP 进程挂起, SIGQUIT 进程结束和dump core, SIGKILL 进程中断, SIGHUP 重启, SIGTERM 停止接收新请求
+	go func() {
+		if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			global.Logger.Fatalf(topCtx, "http server ListenAndServe err: %v", err)
+		}
+	}()
+
+	// 等待中断信号
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutting down server...")
+
+	// 最大时间控制，用于通知服务端它有 5s 的时间来处理原有的请求
+	ctx, cancel := context.WithTimeout(topCtx, global.AppSetting.DefaultContextTimeout)
+	defer cancel()
+	if err := s.Shutdown(ctx); err != nil {
+		global.Logger.Fatalf(ctx, "http server forced to shutdown, err: %v", err)
+	}
+	global.Logger.Info(ctx, "http server exiting")
 }
 
 func init() {
@@ -75,7 +109,7 @@ var (
 	config    string
 	isVersion bool
 	// -ldflags -X 参数，将信息写入变量中，格式为 package_name.variable_name=value
-	// 构建信息：go build -ldflags -n -l "-X main.buildTime=`data +%Y-%m-%d %H%M%S` -X main.buildVersion=v1.0.1 -X main.gitCommitID=`git rev-parse HEAD`"
+	// 构建信息：CGO_ENABLED=0 GOOS=linux go build -a -o blog-service . -ldflags="-w -s" -gcflags="-m -l" "-X main.buildTime=`data +%Y-%m-%d %H%M%S` -X main.buildVersion=v1.0.1 -X main.gitCommitID=`git rev-parse HEAD`"
 	buildTime    string
 	buildVersion string
 	gitCommitID  string
