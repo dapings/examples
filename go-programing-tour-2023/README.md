@@ -64,5 +64,22 @@
    - 利用Redis实现Token Bucket，支持分布式的限流器
 
 3. tag-service RPC 程序
+   
+   RPC应用(gRPC)实现：
+   - gRPC 和 Protobuf 简介
+   - Protobuf 的使用
+   - gRPC 的使用
+   - 运行一个 gRPC 服务
+   - gRPC 服务间的内调
+   - 提供 HTTP 接口
+   - 接口文档
+   - gRPC 拦截器
+   - metadata 和 RPC 自定义认证
+   - 链路追踪
+   - gRPC 服务注册和发现
+   - 实现自定义的 protoc 插件
+   - 对 gRPC 接口进行版本管理
+   - 常见问题讨论
+
 4. chatroom IM聊天室
 5. cache-example 进程内缓存
