@@ -1,6 +1,10 @@
 # Book: Go 语言编程之旅：一起用 Go 做项目
 
 [tour-book source code](https://github.com/go-programming-tour-book)
+[how-can-i-track-tool-dependencies-for-a-module](https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
+[grpc-ecosystem grpc-gateway](https://grpc-ecosystem.github.io/grpc-gateway/)
+[grpcurl](https://github.com/fullstorydev/grpcurl)
+[go-bindata 数据文件转换为Go代码，摆脱静态资源文件](https://github.com/go-bindata/go-bindata)
 
 1. tour 命令行程序
 
@@ -72,7 +76,7 @@
 
      在项目下，安装 Go gRPC 库：`go get -u -v google.golang.org/grpc`
 
-  - 运行一个 gRPC 服务
+   - 运行一个 gRPC 服务
 
      生成 proto 文件：`protoc --go_out=plugins=grpc:. ./proto/*.proto`
      gRPC 是基于 HTTP/2 协议的，不能直接通过 postman 或普通的 curl 进行调用，目前开源社区的方案：命令行工具 grpcurl，安装及使用命令如下：
@@ -85,32 +89,32 @@
      grpcurl -plaintext -d '{"name": "Go"}' localhost:8001 list proto.TagService.GetTagList
      ```
 
-  - gRPC 服务间的内调
-  - 提供 HTTP 接口
+   - gRPC 服务间的内调
+   - 提供 HTTP 接口
 
-    开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
-    简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1 的双流量支持。
-    ```shell
-    # https://grpc-ecosystem.github.io/grpc-gateway/
-    # github.com/grpc-ecosystem/grpc-gateway
-    go install \
-    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
-    github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
-    google.golang.org/protobuf/cmd/protoc-gen-go \
-    google.golang.org/grpc/cmd/protoc-gen-go-grpc
-    
-    # -I 参数的格式：-IPATH,--proto_path=PATH，用来指定 proto 文件中 import 搜索的目录，可指定多个。如果不指定，则默认是当前工作目录。
-    protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:. ./proto/*.proto
-    ```
+     开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
+     简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1 的双流量支持。
+     ```shell
+     # https://grpc-ecosystem.github.io/grpc-gateway/
+     # github.com/grpc-ecosystem/grpc-gateway
+     go install \
+     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
+     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
+     google.golang.org/protobuf/cmd/protoc-gen-go \
+     google.golang.org/grpc/cmd/protoc-gen-go-grpc
+     
+     # -I 参数的格式：-IPATH,--proto_path=PATH，用来指定 proto 文件中 import 搜索的目录，可指定多个。如果不指定，则默认是当前工作目录。
+     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:. ./proto/*.proto
+     ```
 
-  - 接口文档
-  - gRPC 拦截器
-  - metadata 和 RPC 自定义认证
-  - 链路追踪
-  - gRPC 服务注册和发现
-  - 实现自定义的 protoc 插件
-  - 对 gRPC 接口进行版本管理
-  - 常见问题讨论
+   - 接口文档
+   - gRPC 拦截器
+   - metadata 和 RPC 自定义认证
+   - 链路追踪
+   - gRPC 服务注册和发现
+   - 实现自定义的 protoc 插件
+   - 对 gRPC 接口进行版本管理
+   - 常见问题讨论
 
 4. chatroom IM聊天室
 5. cache-example 进程内缓存
