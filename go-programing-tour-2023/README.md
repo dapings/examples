@@ -2,8 +2,20 @@
 
 [tour-book source code](https://github.com/go-programming-tour-book)
 [how-can-i-track-tool-dependencies-for-a-module](https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
+
+[protocol buffers documentation](https://protobuf.dev/)
+[protocol buffers go tutorial](https://protobuf.dev/getting-started/gotutorial/)
+[protocol buffers - protobuf](https://github.com/protocolbuffers/protobuf)
+
+[grpc.io](https://grpc.io/)
+[protoc-installation](https://grpc.io/docs/protoc-installation/)
+[grpc-go-quick-start](https://grpc.io/docs/languages/go/quickstart/)
+[golang-protobuf](https://github.com/golang/protobuf/)
+[grpc/grpc](https://github.com/grpc/grpc)
+[grpc/grpc-go](https://github.com/grpc/grpc-go)
 [grpc-ecosystem grpc-gateway](https://grpc-ecosystem.github.io/grpc-gateway/)
 [grpcurl](https://github.com/fullstorydev/grpcurl)
+
 [go-bindata 数据文件转换为Go代码，摆脱静态资源文件](https://github.com/go-bindata/go-bindata)
 
 1. tour 命令行程序
@@ -72,9 +84,37 @@
    RPC应用(gRPC)实现：
    - gRPC 和 Protobuf 简介
    - Protobuf 的使用
+   
+     protoc 是 protobuf 的编译器，是用 C++ 编写的，其主要功能是编译 .proto 文件。
+     参照 `protoc-installation` 安装 protoc。在找不到安装的动态链接库的特定情况下，需要手动执行 `ldconfig` 命令，让动态链接库为系统所共享。也就是说，ldconfig 是一个动态链接库管理命令。
+     ```shell
+     wget https://github.com/protocolbuffers/protobuf/releases/download/v3.15.7/protoc-3.15.7-osx-x86_64.zip
+     unzip -d protoc-3.15.7-osx protoc-3.15.7-osx-x86_64.zip
+     ln -fs protoc-3.15.7-osx current
+     ```
+     
+     仅安装protoc编译器是不够的，针对不同的语音，还需要安装运行时的 protoc 插件，而对就 Go 的是 protoc-gen-go 插件、protoc-gen-go-grpc 插件。
+     ```shell
+     # module github.com/golang/protobuf is deprecated, use the "google.golang.org/protobuf" module instead.
+     # go get -d -u -v github.com/golang/protobuf/protoc-gen-go
+     # google.golang.org/protobuf=github.com/golang/protobuf
+     go install google.golang.org/protobuf/cmd/protoc-gen-go@v2.15.2
+     
+     # module declares its path as: google.golang.org/grpc/cmd/protoc-gen-go-grpc, but was required as: github.com/grpc/grpc-go/cmd/protoc-gen-go-grpc
+     # go get -d -u -v github.com/grpc/grpc-go/cmd/protoc-gen-go-grpc
+     # google.golang.org/grpc=github.com/grpc/grpc-go
+     go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
+     #export PATH="$PATH:$(go env GOPATH)/bin"
+     ```
+
    - gRPC 的使用
 
-     在项目下，安装 Go gRPC 库：`go get -u -v google.golang.org/grpc`
+     在项目下，安装 Go gRPC 库：
+     ```shell
+     # github.com/grpc/grpc-go v1.59.0 
+     # google.golang.org/grpc=github.com/grpc/grpc-go
+     go get -u -v google.golang.org/grpc
+     ```
 
    - 运行一个 gRPC 服务
 
