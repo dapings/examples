@@ -1,4 +1,4 @@
-# Book: Go 语言编程之旅：一起用 Go 做项目
+# Book: [Go 语言编程之旅：一起用 Go 做项目](https://golang2.eddycjy.com/)
 
 [tour-book source code](https://github.com/go-programming-tour-book)
 [how-can-i-track-tool-dependencies-for-a-module](https://github.com/golang/go/wiki/Modules#how-can-i-track-tool-dependencies-for-a-module)
@@ -6,10 +6,12 @@
 [protocol buffers documentation](https://protobuf.dev/)
 [protocol buffers go tutorial](https://protobuf.dev/getting-started/gotutorial/)
 [protocol buffers - protobuf](https://github.com/protocolbuffers/protobuf)
+[go generated code guide](https://protobuf.dev/reference/go/go-generated/#package)
 
 [grpc.io](https://grpc.io/)
 [protoc-installation](https://grpc.io/docs/protoc-installation/)
 [grpc-go-quick-start](https://grpc.io/docs/languages/go/quickstart/)
+  - [regenerate grpc code](https://grpc.io/docs/languages/go/quickstart/#regenerate-grpc-code)
 [golang-protobuf](https://github.com/golang/protobuf/)
 [grpc/grpc](https://github.com/grpc/grpc)
 [grpc/grpc-go](https://github.com/grpc/grpc-go)
@@ -88,9 +90,12 @@
      protoc 是 protobuf 的编译器，是用 C++ 编写的，其主要功能是编译 .proto 文件。
      参照 `protoc-installation` 安装 protoc。在找不到安装的动态链接库的特定情况下，需要手动执行 `ldconfig` 命令，让动态链接库为系统所共享。也就是说，ldconfig 是一个动态链接库管理命令。
      ```shell
-     wget https://github.com/protocolbuffers/protobuf/releases/download/v3.15.7/protoc-3.15.7-osx-x86_64.zip
-     unzip -d protoc-3.15.7-osx protoc-3.15.7-osx-x86_64.zip
-     ln -fs protoc-3.15.7-osx current
+     # 3.15.7 to 25.1
+     PROTOC_VERSION=25.1
+     #wget https://github.com/protocolbuffers/protobuf/releases/download/v3.15.7/protoc-3.15.7-osx-x86_64.zip
+     wget https://github.com/protocolbuffers/protobuf/releases/download/v$PROTOC_VERSION/protoc-$PROTOC_VERSION-osx-x86_64.zip
+     unzip -d protoc-$PROTOC_VERSION-osx protoc-$PROTOC_VERSION-osx-x86_64.zip
+     ln -fs protoc-$PROTOC_VERSION-osx current
      ```
      
      仅安装protoc编译器是不够的，针对不同的语音，还需要安装运行时的 protoc 插件，而对就 Go 的是 protoc-gen-go 插件、protoc-gen-go-grpc 插件。
@@ -98,11 +103,13 @@
      # module github.com/golang/protobuf is deprecated, use the "google.golang.org/protobuf" module instead.
      # go get -d -u -v github.com/golang/protobuf/protoc-gen-go
      # google.golang.org/protobuf=github.com/golang/protobuf
-     go install google.golang.org/protobuf/cmd/protoc-gen-go@v2.15.2
+     #go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
      
      # module declares its path as: google.golang.org/grpc/cmd/protoc-gen-go-grpc, but was required as: github.com/grpc/grpc-go/cmd/protoc-gen-go-grpc
      # go get -d -u -v github.com/grpc/grpc-go/cmd/protoc-gen-go-grpc
      # google.golang.org/grpc=github.com/grpc/grpc-go
+     #go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
      go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
      #export PATH="$PATH:$(go env GOPATH)/bin"
      ```
