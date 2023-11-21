@@ -12,6 +12,7 @@
 [protoc-installation](https://grpc.io/docs/protoc-installation/)
 [grpc-go-quick-start](https://grpc.io/docs/languages/go/quickstart/)
   - [regenerate grpc code](https://grpc.io/docs/languages/go/quickstart/#regenerate-grpc-code)
+  - [examples](https://github.com/grpc/grpc-go/tree/master/examples)
 [golang-protobuf](https://github.com/golang/protobuf/)
 [grpc/grpc](https://github.com/grpc/grpc)
 [grpc/grpc-go](https://github.com/grpc/grpc-go)
@@ -122,6 +123,26 @@
      # google.golang.org/grpc=github.com/grpc/grpc-go
      go get -u -v google.golang.org/grpc
      ```
+     在gRPC中，一共包含四种调用方式，分别是：
+     1. Unary RPC 一元RPC，也就是单次RPC调用，简单来讲就是客户端发起一次普通的RPC请求、响应。
+     2. Server-side streaming RPC 服务端流式RPC，是单向流，服务端流式响应，客户端为普通的一元RPC请求，简单来讲就是客户端发起一次普通的RPC请求，服务端通过流式响应多次发送数据集，客户端 Recv 接收数据集。
+     3. Client-side streaming RPC 客户端流式RPC，是单向流，客户端通过流式发起多次RPC请求给服务端，服务端发起一次响应给客户端。
+     4. Bidirectional streaming RPC 双向流式RPC，是双向流，由客户端以流式的方式发起请求，服务端同样以流式的方式响应请求。
+        第一个请求一定是客户端发起，但具体交互方式(谁先谁后、一次发多少、响应多少、什么时候关闭)，根据程序编写的方式来确定(可结合协程)。
+   
+     在使用 Unary RPC时，会有如下的问题：
+     1. 在一些业务场景下，数据包过大，可能会造成瞬时压力。
+     2. 接收数据包时，需要所有数据包都接受成功且正确后，才能够回调响应，进行业务处理（无法客户端边发送，服务端边处理）。
+
+     Streaming RPC 的场景：
+     1. 持续且大数据包场景
+     2. 实时交互场景
+     
+     gRPC在建立连接前，客户端/服务端都会发送连接前言(Magic+SETTINGS)，确立协议和配置项。
+     gRPC在传输数据时，会涉及滑动窗口（WINDOW_UPDATE）等流控策略的。
+     传播 gRPC 附加信息时，是基于 HEADERS 帧进行传播和设置；而具体的请求/响应数据是存储的 DATA 帧中的。
+     gRPC 请求/响应结果会分为 HTTP 和 gRPC 状态响应（grpc-status、grpc-message）两种类型。
+     客户端发起 PING，服务端就会回应 PONG，反之亦可。
 
    - 运行一个 gRPC 服务
 
