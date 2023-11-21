@@ -1,17 +1,10 @@
 syntax = "proto3";
 
-package proto;
+package protos;
 
-import "proto/common.proto";
-import "google/api/annotations.proto";
+option go_package = "github.com/dapings/examples/tag-service/protos";
 
-service TagService {
-  rpc GetTagList (GetTagListRequest) returns (GetTagListReply) {
-    option (google.api.http) = {
-      get: "/api/v1?/tags"
-    };
-  }
-}
+import "protos/common.proto";
 
 message GetTagListRequest {
   string name = 1;

@@ -2,7 +2,9 @@ syntax = "proto3";
 
 import "google/protobuf/any.proto";
 
-package proto;
+option go_package = "github.com/dapings/examples/tag-service/protos";
+
+package protos;
 
 message Pager {
   int64 page = 1;
