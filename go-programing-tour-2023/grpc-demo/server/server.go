@@ -24,6 +24,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
+	// 注册到gRPC Server的内部注册中心，这样可以在接受到请求时，通过内部的服务发现
 	pb.RegisterGreeterServer(s, &server{})
 	log.Printf("server listening at %v", l.Addr())
 

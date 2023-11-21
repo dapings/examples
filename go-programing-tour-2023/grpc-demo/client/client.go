@@ -23,6 +23,8 @@ var (
 func main() {
 	flag.Parse()
 
+	// Dial 创建客户端连接，不是马上建立可用连接
+	// 如果需要立刻打通与服务端的连接，需要设置WithBlock DialOption，这样当发起连接时会阻塞等待连接完成，使最终连接到达Ready状态
 	conn, err := grpc.Dial(*addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("not connect: %v", err)
