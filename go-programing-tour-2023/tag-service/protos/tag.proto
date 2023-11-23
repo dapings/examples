@@ -5,6 +5,15 @@ package protos;
 option go_package = "github.com/dapings/examples/tag-service/protos";
 
 import "protos/common.proto";
+import "google/api/annotations.proto";
+
+service TagService {
+  rpc GetTagList (GetTagListRequest) returns (GetTagListReply) {
+    option (google.api.http) = {
+      get: "/api/v1/tags"
+    };
+  }
+}
 
 message GetTagListRequest {
   string name = 1;
