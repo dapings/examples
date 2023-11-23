@@ -18,6 +18,8 @@ require (
 
 require (
 	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/go-bindata/go-bindata v3.1.2+incompatible // indirect
 	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
@@ -26,9 +28,10 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
+	google.golang.org/genproto v0.0.0-20231120223509-83a465c0220f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20231120223509-83a465c0220f // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
