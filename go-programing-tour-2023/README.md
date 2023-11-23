@@ -16,7 +16,10 @@
 [golang-protobuf](https://github.com/golang/protobuf/)
 [grpc/grpc](https://github.com/grpc/grpc)
 [grpc/grpc-go](https://github.com/grpc/grpc-go)
+
 [grpc-ecosystem grpc-gateway](https://grpc-ecosystem.github.io/grpc-gateway/)
+  - [customizing your gateway](https://grpc-ecosystem.github.io/grpc-gateway/docs/mapping/customizing_your_gateway/)
+[grpc-gateway](https://github.com/grpc-ecosystem/grpc-gateway)
 [grpcurl](https://github.com/fullstorydev/grpcurl)
 
 [go-bindata 数据文件转换为Go代码，摆脱静态资源文件](https://github.com/go-bindata/go-bindata)
@@ -58,7 +61,8 @@
      3. 打包进二进制文件中
         或者将配置文件打包到二进制文件中，通过 go-bindata 库可以将数据文件转换为Go代码，就可以摆脱静态资源文件了。
         ```shell
-         go get -u github.com/go-bindata/go-bindata/...
+         #go get -u github.com/go-bindata/go-bindata/...
+         go install github.com/go-bindata/go-bindata/...@v3.1
          go-bindata -o configs/config.go -pkg=configs configs/config.yaml
          # 执行如下代码，读取对应的文件内容
          b, _ := configs.Assert("configs/config.yaml")
@@ -86,6 +90,9 @@
    
    RPC应用(gRPC)实现：
    - gRPC 和 Protobuf 简介
+   
+     Protobuf 是强规范的，其本身就包含字段名和字段类型等信息。
+
    - Protobuf 的使用
    
      protoc 是 protobuf 的编译器，是用 C++ 编写的，其主要功能是编译 .proto 文件。
@@ -146,16 +153,28 @@
 
    - 运行一个 gRPC 服务
 
-     生成 proto 文件：`protoc --go_out=plugins=grpc:. ./proto/*.proto`
+     生成 proto 文件：
+     ```shell
+     #protoc --go_out=plugins=grpc:. ./protos/*.proto
+     protoc --go_out=./protos/ --go-grpc_out=./protos/ ./protos/*.proto
+     
+     protoc -I. -I/Users/ghongli/gData/packages/golang/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+     --go_out=./protos/ --go-grpc_out=./protos/ \
+     --grpc-gateway_out=logtostderr=true:./protos ./protos/*.proto
+     ```
+     如果存在多层级目录的情况，可以利用 protoc 命令的 -I, M 指令来进行特定的处理。
+     
      gRPC 是基于 HTTP/2 协议的，不能直接通过 postman 或普通的 curl 进行调用，目前开源社区的方案：命令行工具 grpcurl，安装及使用命令如下：
      ```shell
      go get -u -v github.com/fullstorydev/grpcurl
      go install github.com/fullstorydev/grpcurl/cmd/grpcurl
+     
      # 默认使用 TLS 认证(-cert,-key 设置公钥和密钥)，-plaintext 用来忽略TLS认证
      grpcurl -plaintext localhost:8001 list
      grpcurl -plaintext localhost:8001 list proto.TagService
      grpcurl -plaintext -d '{"name": "Go"}' localhost:8001 list proto.TagService.GetTagList
      ```
+     但使用此工具的前提是gRPC Server 已经注册了反射服务：`s := grpc.NewServer() reflection.Register(s)`
 
    - gRPC 服务间的内调
    - 提供 HTTP 接口
@@ -166,16 +185,57 @@
      # https://grpc-ecosystem.github.io/grpc-gateway/
      # github.com/grpc-ecosystem/grpc-gateway
      go install \
-     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway \
-     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2 \
-     google.golang.org/protobuf/cmd/protoc-gen-go \
-     google.golang.org/grpc/cmd/protoc-gen-go-grpc
+     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.15 \
+     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.15 \
+     google.golang.org/protobuf/cmd/protoc-gen-go@v1.28 \
+     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
      
      # -I 参数的格式：-IPATH,--proto_path=PATH，用来指定 proto 文件中 import 搜索的目录，可指定多个。如果不指定，则默认是当前工作目录。
-     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:. ./proto/*.proto
+     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:./protos/ ./protos/*.proto
      ```
 
    - 接口文档
+   
+     proto 的插件 protoc-gen-swagger，作用是通过 proto 文件生成 swagger 定义(.swagger.json)：
+     ```shell
+     # github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+     go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger@latest
+     ```
+
+     proto 的插件 protoc-gen-openapiv2，作用是通过 proto 文件生成 OpenAPI 定义(.swagger.json):
+     ```shell
+     go install \
+     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.15.2
+     
+     # generating OpenAPI definitions for unannotated methods, use the `generate_unbound_methods` option
+     # --openapiv2_out=generate_unbound_methods=true;./gen/openapiv2 
+     # or --openapiv2_out ./gen/openapiv2 --openapiv2_opt generate_unbound_methods=true
+     protoc -I. --openapiv2_out ./gen/openapiv2 --openapiv2_opt generate_unbound_methods=true \
+     ./protos/tag.proto
+     ```
+     
+     Swagger 提供了可视化的接口管理平台-[Swagger UI](https://swagger.io/tools/swagger-ui/)。从其管理平台下载源码压缩包，将其目录下的dist目录下的所有资源文件拷贝到项目的 third_part/swagger-ui 目录中。
+     使用 go-bindata 库将资源应文件转换为 Go 代码，转换命令：`go-bindata --nocompress -pkg swagger -o pkg/swagger/data.go third_party/swagger-ui/...`，命令自动在目录 pkg/swagger 下创建 data.go 文件。
+     为了让转换的静态资源代码能够被外部访问，需安装 go-bindata-assetfs 库，它能够结合 net/http、go-bindata 库生成 swagger-ui 的go代码供外部访问：
+     ```shell
+     go get -u github.com/elazarl/go-bindata-assetfs/...
+     ```
+     在 HTTP Server 中添加AssetFS相关的http.FileServer相关的处理逻辑：
+     ```shell
+     fileServer := http.FileServer(&assetfs.AssetFS{
+		Asset:     swagger.Asset,
+		AssetDir:  swagger.AssetDir,
+		Prefix: "third_party/swagger-ui",
+     })
+     serveMux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+     ```
+     
+     基于 proto 文件生成 swagger 定义文件 .swagger.json:
+     ```shell
+     protoc -I. -I$GOPATH/src \
+     --swagger_out=logtostderr=true:./protos/ ./protos/*.proto
+     ```
+
    - gRPC 拦截器
    - metadata 和 RPC 自定义认证
    - 链路追踪
