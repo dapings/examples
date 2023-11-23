@@ -8,6 +8,7 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/internal/middleware"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/rpc"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/tracer"
+	pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -34,7 +35,12 @@ func main() {
 	}(clientConn)
 
 	// 业务逻辑：查询标签列表
-	// TODO
+	tagServiceClient := pb.NewTagServiceClient(clientConn)
+	resp, err := tagServiceClient.GetTagList(ctx, &pb.GetTagListRequest{Name: "Go"})
+	if err != nil {
+		log.Fatalf("tagServiceClient.GetTagList err: %v", err)
+	}
+	log.Printf("resp: %v", resp)
 }
 
 func init() {

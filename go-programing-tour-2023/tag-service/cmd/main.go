@@ -8,7 +8,10 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/internal/middleware"
+	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/swagger"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/tracer"
+	pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
+	"github.com/dapings/examples/go-programing-tour-2023/tag-service/server"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -17,6 +20,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
+	// pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
 )
 
 var port string
@@ -45,11 +49,12 @@ func runHTTPServer() *http.ServeMux {
 
 	prefix := "/swagger-ui/"
 	fileServer := http.FileServer(&assetfs.AssetFS{
-		// Asset:     swagger.Asset,
-		// AssetDir:  swagger.AssetDir,
-		Prefix: "third_party/swagger-ui",
+		Asset:    swagger.Asset,
+		AssetDir: swagger.AssetDir,
+		Prefix:   "third_party/swagger-ui",
 	})
 	serveMux.Handle(prefix, http.StripPrefix(prefix, fileServer))
+	//
 	serveMux.HandleFunc("/swagger/", func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasSuffix(r.URL.Path, "swagger.json") {
 			http.NotFound(w, r)
@@ -83,6 +88,8 @@ func runGRPCServer() *grpc.Server {
 		)),
 	}
 	s := grpc.NewServer(opts...)
+	pb.RegisterTagServiceServer(s, server.NewTagServer())
+	// 注册gRPC反射服务，才要以使用 grpcurl 工具调试gRPC接口
 	reflection.Register(s)
 	return s
 }
