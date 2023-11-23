@@ -5,6 +5,8 @@ import (
 )
 
 var (
-	Tracer         opentracing.Tracer
+	Tracer opentracing.Tracer
+
+	HTTPSpanTagVal = "HTTP"
 	GRPCSpanTagVal = "gRPC"
 )
