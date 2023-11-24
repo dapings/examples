@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"path"
@@ -14,7 +15,8 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/server"
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	gwruntime "github.com/grpc-ecosystem/grpc-gateway/runtime"
+	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
 	"golang.org/x/net/http2"
@@ -40,6 +42,7 @@ func runServer(port string) error {
 	return http.ListenAndServe(":"+port, grpcHandlerFunc(grpcServer, httpMux))
 }
 
+// 创建一个新的 http 多路复用器
 func runHTTPServer() *http.ServeMux {
 	serveMux := http.NewServeMux()
 	serveMux.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
@@ -69,10 +72,11 @@ func runHTTPServer() *http.ServeMux {
 }
 
 func runGRPCGatewayServer() *gwruntime.ServeMux {
-	// ctx := context.Background()
-	// endpoint := "0.0.0.0:"+port
+	ctx := context.Background()
+	endpoint := "0.0.0.0:" + port
 	gwmux := gwruntime.NewServeMux()
-	// dopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	dopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	_ = pb.RegisterTagServiceHandlerFromEndpoint(ctx, gwmux, endpoint, dopts)
 
 	return gwmux
 }

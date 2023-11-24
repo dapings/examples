@@ -16,8 +16,8 @@ import (
 
 func main() {
 	ctx := context.Background()
-	newCtx := metadata.AppendToOutgoingContext(ctx, "", "")
-	clientConn, err := rpc.GetClientConn(newCtx, "127.0.0.1:8004",
+	newCtx := metadata.AppendToOutgoingContext(ctx, "tag-server", "Go Programing")
+	clientConn, err := rpc.GetClientConn(newCtx, global.TagServerAddr,
 		[]grpc.DialOption{grpc.WithUnaryInterceptor(
 			grpcmiddleware.ChainUnaryClient(
 				middleware.UnaryCtxTimeout(),
