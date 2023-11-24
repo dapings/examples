@@ -182,8 +182,21 @@
    - gRPC 服务间的内调
    - 提供 HTTP 接口
 
+     grpc协议的本质是HTTP/2协议，如果服务需要在同端口适配两种协议流量，则需要进行特殊处理。
+     - 不同的两个端口，监听不同协议的流量：使用两个协程分别监听 http endpoint, grpc endpoint 实际是一个阻塞行为。
+     - 同端口上兼容多种协议：使用第三方开源库cmux来实现对多协议的支持。
+     
+        cmux根据有效负载(payload)对连接进行多路复用，即只匹配连接的前面的字节来区分当前连接的类型，可以在同一tcp listener上提供grpc,ssh,https,http,go rpc等几乎所有其他协议的服务，是一个相对通用的方案。
+        需要注意，一个连接可以是grpc或http，但不能同时是两者。
+        ```shell
+        go get -u github.com/soheilhy/cmux@v0.1.5
+        ```
+        grpc(http/2),http/1.1在网络分层上都是基于tcp协议的，拆分为tcp,grpc,http逻辑，便于连接多路复用器。cmux基于content-type头信息标识进行分流，grpc特定标识：application/grpc。
+
+     - 同端口同方法双流量支持：grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
+
      开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
-     简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1 的双流量支持。
+     简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
      ```shell
      # https://grpc-ecosystem.github.io/grpc-gateway/
      # github.com/grpc-ecosystem/grpc-gateway
