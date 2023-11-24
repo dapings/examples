@@ -20,7 +20,6 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
-	// pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
 )
 
 var port string

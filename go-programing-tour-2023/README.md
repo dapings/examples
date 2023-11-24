@@ -158,11 +158,14 @@
      #protoc --go_out=plugins=grpc:. ./protos/*.proto
      protoc --go_out=./protos/ --go-grpc_out=./protos/ ./protos/*.proto
      
-     protoc -I. -I/Users/ghongli/gData/packages/golang/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
      --go_out=./protos/ --go-grpc_out=./protos/ \
      --grpc-gateway_out=logtostderr=true:./protos ./protos/*.proto
      ```
      如果存在多层级目录的情况，可以利用 protoc 命令的 -I, M 指令来进行特定的处理。
+     googleapis 是 google API 的公共接口定义，在 github 上搜索 googleapis 可找到对应的仓库。需要注意的是，由于 Go 具有不同的目录结构，很难在原始的googleapis库中存储和生成go grpc代码，所以go grpc实际上使用的是`go-genproto`库，此库有如下两个主要使用来源：
+     - google/protobuf: protobuf, ptypes 子目录中的代码，均从存储库派生的，protobuf中的消息休用于描述 protobuf 本身，ptypes 下的消息体定义了常见的类型。
+     - googleapis/googleapis: 专门用于与google API进行交互的类型。
      
      gRPC 是基于 HTTP/2 协议的，不能直接通过 postman 或普通的 curl 进行调用，目前开源社区的方案：命令行工具 grpcurl，安装及使用命令如下：
      ```shell
