@@ -193,22 +193,28 @@
         ```
         grpc(http/2),http/1.1在网络分层上都是基于tcp协议的，拆分为tcp,grpc,http逻辑，便于连接多路复用器。cmux基于content-type头信息标识进行分流，grpc特定标识：application/grpc。
 
-     - 同端口同方法双流量支持：grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
+     - 同端口同方法双流量支持：应用代理 grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
 
-     开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
-     简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
-     ```shell
-     # https://grpc-ecosystem.github.io/grpc-gateway/
-     # github.com/grpc-ecosystem/grpc-gateway
-     go install \
-     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.15 \
-     github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.15 \
-     google.golang.org/protobuf/cmd/protoc-gen-go@v1.28 \
-     google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
+       开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
+       简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
+       ```shell
+       # https://grpc-ecosystem.github.io/grpc-gateway/
+       # github.com/grpc-ecosystem/grpc-gateway
+       go install \
+       github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.15 \
+       github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2@v2.15 \
+       google.golang.org/protobuf/cmd/protoc-gen-go@v1.28 \
+       google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2
      
-     # -I 参数的格式：-IPATH,--proto_path=PATH，用来指定 proto 文件中 import 搜索的目录，可指定多个。如果不指定，则默认是当前工作目录。
-     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:./protos/ ./protos/*.proto
-     ```
+       # -I 参数的格式：-IPATH,--proto_path=PATH，用来指定 proto 文件中 import 搜索的目录，可指定多个。如果不指定，则默认是当前工作目录。
+       # Mfoo/bar.proto=quux/shme，则在生成、编译proto时，将指定的包名替换为要求的名字，例子中将把foo/bar.proto编译后的包名替换为quux/shme。
+       protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:./protos/ ./protos/*.proto
+       ```
+       
+    - 其他方案
+      - 外部网关组件
+        - gRPC-JSON transcoder
+        - apache APISIX
 
    - 接口文档
    

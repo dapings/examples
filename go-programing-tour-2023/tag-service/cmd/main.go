@@ -76,6 +76,7 @@ func runGRPCGatewayServer() *gwruntime.ServeMux {
 	endpoint := "0.0.0.0:" + port
 	gwmux := gwruntime.NewServeMux()
 	dopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	// 注册方法事件，内部会自动转换并拨号到grpc endpoint，并在上下文结束后关闭连接。
 	_ = pb.RegisterTagServiceHandlerFromEndpoint(ctx, gwmux, endpoint, dopts)
 
 	return gwmux
