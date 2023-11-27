@@ -128,7 +128,7 @@
      ```shell
      # github.com/grpc/grpc-go v1.59.0 
      # google.golang.org/grpc=github.com/grpc/grpc-go
-     go get -u -v google.golang.org/grpc
+     go get -u -v google.golang.org/grpc@v1.29.1
      ```
      在gRPC中，一共包含四种调用方式，分别是：
      1. Unary RPC 一元RPC，也就是单次RPC调用，简单来讲就是客户端发起一次普通的RPC请求、响应。
@@ -214,7 +214,7 @@
     - 其他方案
       - 外部网关组件
         - gRPC-JSON transcoder
-        - apache APISIX
+        - apache APISIX: etcd grpc proxy(A stateless etcd reverse proxy operating at the gRPC layer)
 
    - 接口文档
    
