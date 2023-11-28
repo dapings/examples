@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/rpc"
 	pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/server"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 )
 
@@ -32,7 +32,7 @@ func runServer(port string) error {
 
 	endpoint := "0.0.0.0:" + port
 	gwmux := runtime.NewServeMux()
-	dopts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	dopts := []grpc.DialOption{rpc.GetGRPCDialOptionWithInsecure()}
 	_ = pb.RegisterTagServiceHandlerFromEndpoint(context.Background(), gwmux, endpoint, dopts)
 	httpMux.Handle("/", gwmux)
 
