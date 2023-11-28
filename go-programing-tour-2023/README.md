@@ -178,6 +178,9 @@
      grpcurl -plaintext -d '{"name": "Go"}' localhost:8001 list proto.TagService.GetTagList
      ```
      但使用此工具的前提是gRPC Server 已经注册了反射服务：`s := grpc.NewServer() reflection.Register(s)`
+   
+     > gRPC Server/Client 在启动和调用时，必须明确其是否加密，`DialOpton grpc.WithInsecure`指定为非加密模式。
+     > grpc(HTTP/2)和HTTP/1.1通过Header中的Content-Type和ProtoMajor标识进行分流 
 
    - gRPC 服务间的内调
    - 提供 HTTP 接口
@@ -210,6 +213,9 @@
        # Mfoo/bar.proto=quux/shme，则在生成、编译proto时，将指定的包名替换为要求的名字，例子中将把foo/bar.proto编译后的包名替换为quux/shme。
        protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis --grpc-gateway_out=logtostderr=true:./protos/ ./protos/*.proto
        ```
+       google/api/annotations.proto 文件，是 googleapis 的产物。使用grpc-gateway下的annotations.proto，可以保证兼容性和稳定性。
+       http.proto HttpRule 对HTTP转换提供支持，可用于定义API服务的HTTP的相关配置，并可以指定每一个RPC方法都映射到一个或多个HTTP REST API方法上。
+       如果没有引入annotations.proto文件，且填写了相关的HTTP Option，则执行生成命令后，虽然不会报错，但不会生成任何相关内容。
        
     - 其他方案
       - 外部网关组件
@@ -255,8 +261,10 @@
      基于 proto 文件生成 swagger 定义文件 .swagger.json:
      ```shell
      protoc -I. -I$GOPATH/src \
+     -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
      --swagger_out=logtostderr=true:./protos/ ./protos/*.proto
      ```
+     在实际环境中，让每个服务仅提供swagger定义，然后在统一的平台上提供swagger站点来读取swagger定义，这样就不需要每个服务都运行swagger站点了，同时由于入口是统一的，所以鉴权也能在这个基础上完成。
 
    - gRPC 拦截器
    - metadata 和 RPC 自定义认证
