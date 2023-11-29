@@ -9,7 +9,9 @@ import (
 	"path"
 	"strings"
 	"time"
-	
+
+	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/proxy/grpcproxy"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/internal/middleware"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/rpc"
@@ -19,8 +21,6 @@ import (
 	assetfs "github.com/elazarl/go-bindata-assetfs"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/proxy/grpcproxy"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"

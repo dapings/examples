@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"strings"
 	"time"
-	
+
+	"github.com/coreos/etcd/clientv3"
+	"github.com/coreos/etcd/proxy/grpcproxy"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/global"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/internal/middleware"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/rpc"
@@ -17,8 +19,6 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/server"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"go.etcd.io/etcd/clientv3"
-	"go.etcd.io/etcd/proxy/grpcproxy"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"google.golang.org/grpc"
@@ -41,7 +41,8 @@ func runServer(port string) error {
 	gRPCServer := runGRPCServer()
 
 	endpoint := "0.0.0.0:" + port
-	gwmux := runtime.NewServeMux()
+	// 把为grpc-gateway定制的错误处理方法，注册到对应的地方
+	gwmux := runtime.NewServeMux(runtime.WithErrorHandler(gRPCGatewayERROR))
 	dopts := []grpc.DialOption{rpc.GetGRPCDialOptionWithInsecure()}
 	_ = pb.RegisterTagServiceHandlerFromEndpoint(context.Background(), gwmux, endpoint, dopts)
 	httpMux.Handle("/", gwmux)
@@ -95,8 +96,12 @@ func gRPCHandlerFunc(gRPCServer *grpc.Server, otherHandler http.Handler) http.Ha
 	}), &http2.Server{})
 }
 
+// 对grpc-gateway的错误进行定制
+// 实际上，grpc-status对应的是HTTP状态码，业务错误码对应的是客户端所所需的消息主体。
 func gRPCGatewayERROR(ctx context.Context, _ *runtime.ServeMux, marshaler runtime.Marshaler,
 	w http.ResponseWriter, _ *http.Request, err error) {
+	// 对返回的gRPC错误进行了两次处理，将其转换为对应的HTTP状态码和对应的消息主体
+	// 确保客户端能够根据RESTFul API的标准来进行交互。
 	s, ok := status.FromError(err)
 	if !ok {
 		s = status.New(codes.Unknown, err.Error())
@@ -120,12 +125,12 @@ func gRPCGatewayERROR(ctx context.Context, _ *runtime.ServeMux, marshaler runtim
 	_, _ = w.Write(resp)
 }
 
-func init() {
-	flag.StringVar(&port, "port", "8004", "启动端口")
-	flag.Parse()
-}
-
 type httpError struct {
 	Code    int32  `json:"code,omitempty"`
 	Message string `json:"message,omitempty"`
+}
+
+func init() {
+	flag.StringVar(&port, "port", "8004", "启动端口")
+	flag.Parse()
 }
