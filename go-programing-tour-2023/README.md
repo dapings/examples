@@ -126,9 +126,10 @@
 
      在项目下，安装 Go gRPC 库：
      ```shell
-     # github.com/grpc/grpc-go v1.59.0 
+     # github.com/grpc/grpc-go v1.59.0, v1.29.1
      # google.golang.org/grpc=github.com/grpc/grpc-go
-     go get -u -v google.golang.org/grpc@v1.29.1
+     # go get -u -v google.golang.org/grpc
+     go get -u -v google.golang.org/grpc@v1.29
      ```
      在gRPC中，一共包含四种调用方式，分别是：
      1. Unary RPC 一元RPC，也就是单次RPC调用，简单来讲就是客户端发起一次普通的RPC请求、响应。
@@ -219,7 +220,7 @@
        
     - 其他方案
       - 外部网关组件
-        - gRPC-JSON transcoder
+        - envoy gRPC-JSON transcoder
         - apache APISIX: etcd grpc proxy(A stateless etcd reverse proxy operating at the gRPC layer)
 
    - 接口文档
@@ -260,9 +261,10 @@
      
      基于 proto 文件生成 swagger 定义文件 .swagger.json:
      ```shell
+     # protos 目录下生成 .swagger.json 定义文件
      protoc -I. -I$GOPATH/src \
      -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-     --swagger_out=logtostderr=true:./protos/ ./protos/*.proto
+     --swagger_out=logtostderr=true:. ./protos/*.proto
      ```
      在实际环境中，让每个服务仅提供swagger定义，然后在统一的平台上提供swagger站点来读取swagger定义，这样就不需要每个服务都运行swagger站点了，同时由于入口是统一的，所以鉴权也能在这个基础上完成。
 
