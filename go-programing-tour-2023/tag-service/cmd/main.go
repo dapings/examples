@@ -89,6 +89,10 @@ func runGRPCGatewayServer() *gwruntime.ServeMux {
 	dopts := []grpc.DialOption{rpc.GetGRPCDialOptionWithInsecure()}
 	// 注册方法事件，内部会自动转换并拨号到grpc endpoint，并在上下文结束后关闭连接。
 	// 主要进行gRPC连接的创建和管控。
+	// 1. 将当前RPC方法预定义的HTTP Endpoint注册到传入的gwmux HTTP多路复用器中
+	// 2. 超时时间通过 ctx 进行控制
+	// 3. 请求/响应数据，根据传入的 MIME 类型进行序列化，默认是 json
+	// 4. 将gRPC metadata 转换为 context，便于使用
 	_ = pb.RegisterTagServiceHandlerFromEndpoint(ctx, gwmux, endpoint, dopts)
 
 	return gwmux
