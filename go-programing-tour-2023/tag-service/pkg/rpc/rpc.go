@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	// "google.golang.org/grpc/credentials/insecure"
 )
 
 func GetClientConn(ctx context.Context, target string, opts []grpc.DialOption) (*grpc.ClientConn, error) {
@@ -16,6 +16,6 @@ func GetClientConn(ctx context.Context, target string, opts []grpc.DialOption) (
 }
 
 func GetGRPCDialOptionWithInsecure() grpc.DialOption {
-	// grpc.WithInsecure()
-	return grpc.WithTransportCredentials(insecure.NewCredentials())
+	return grpc.WithInsecure()
+	// return grpc.WithTransportCredentials(insecure.NewCredentials())
 }
