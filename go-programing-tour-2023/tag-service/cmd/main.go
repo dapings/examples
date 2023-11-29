@@ -18,6 +18,7 @@ import (
 	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	gwruntime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -74,7 +75,16 @@ func runHTTPServer() *http.ServeMux {
 func runGRPCGatewayServer() *gwruntime.ServeMux {
 	ctx := context.Background()
 	endpoint := "0.0.0.0:" + port
-	gwmux := gwruntime.NewServeMux()
+	var serverMuxOpts []gwruntime.ServeMuxOption
+	// 使用 grpc-gateway 中的 runtime.WithMarshalerOption方法，注册所需要的MIME类型及对应的Marshaler，
+	// 默认使用 application/json，application/jsonpb 进行序列化。
+	serverMuxOpts = append(serverMuxOpts,
+		gwruntime.WithMarshalerOption("*", &gwruntime.HTTPBodyMarshaler{Marshaler: &gwruntime.JSONPb{
+			MarshalOptions:   protojson.MarshalOptions{EmitUnpopulated: true},
+			UnmarshalOptions: protojson.UnmarshalOptions{DiscardUnknown: true},
+		}}),
+	)
+	gwmux := gwruntime.NewServeMux(serverMuxOpts...)
 	// gRPC Server/Client 在启动和调用时，必须明确其是否加密，`DialOpton grpc.WithInsecure`指定为非加密模式。
 	dopts := []grpc.DialOption{rpc.GetGRPCDialOptionWithInsecure()}
 	// 注册方法事件，内部会自动转换并拨号到grpc endpoint，并在上下文结束后关闭连接。
