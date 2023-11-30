@@ -99,6 +99,9 @@ func runGRPCGatewayServer() *gwruntime.ServeMux {
 }
 
 func runGRPCServer() *grpc.Server {
+	// grpc.ServerOption 设置Server的相关属性，如credentials,keepalive等参数。
+	// 拦截器在此注册，需以指定的类型封装，如一元拦截器的类型必须为grpc.UnaryInterceptor。
+	// 在grpc.UnaryInterceptor中嵌套grpc_middleware.ChainUnaryServer，以链式方式达到用多个拦截器的目的。
 	opts := []grpc.ServerOption{
 		grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
 			middleware.AccessLog,

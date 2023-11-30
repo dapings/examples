@@ -269,6 +269,104 @@
      在实际环境中，让每个服务仅提供swagger定义，然后在统一的平台上提供swagger站点来读取swagger定义，这样就不需要每个服务都运行swagger站点了，同时由于入口是统一的，所以鉴权也能在这个基础上完成。
 
    - gRPC 拦截器
+   
+     在每个RPC方法的前面或后面做统一的特殊处理，如鉴权校验、上下文的超时控制、请求的日志记录等，使用拦截器(Interceptor)定制，不直接侵入业务代码。
+     一种类型的拦截器只允许设置一个。gpc-go #935明确得知：官方仅提供了一个拦截器的钩子，以便在其中构建各种复杂的拦截器模式，而不会遇到多个拦截器的执行顺序问题，同时还能保持grpc-go自身的简介性，尽可能最小化公共API。
+     将不同的功能设计为为同的拦截器：
+     - 自己实现一套多拦截器的逻辑(拦截器中调用拦截器)
+     - 直接使用grpc应用生态(grpc-ecosystem)中的go-grpc-middleware提供的grpc.UnaryInterceptor,grpc.StreamInterceptor， 在grpc.*Interceptor中嵌套grpc_middleware.ChainUnaryServer或grpc_middleware.ChainUnaryClient(拦截器数量大于1时，每个递归的拦截器都会不断地执行，最后才去真正执行代表RPC方法的handler)，以链式方式达到用多个拦截器的目的。
+       ```
+       // 服务端拦截器
+       // grpc.ServerOption 设置Server的相关属性，如credentials,keepalive等参数。
+       // 拦截器在此注册，需以指定的类型封装，如一元拦截器的类型必须为grpc.UnaryInterceptor。
+       // 在grpc.UnaryInterceptor中嵌套grpc_middleware.ChainUnaryServer，以链式方式达到用多个拦截器的目的。
+       opts := []grpc.ServerOption{
+           grpc.UnaryInterceptor(grpcmiddleware.ChainUnaryServer(
+               middleware.AccessLog,
+               middleware.ErrorLog,
+               middleware.Recovery,
+               middleware.ServerTracing,
+           )),
+       }
+       s := grpc.NewServer(opts...)
+       
+       // 客户端拦截器的相关注册行为是在调用grpc.Dial或grpc.DialContext之前，通过DialOption配置选项进行注册的。
+       // 超时控制(对上下文超时时间的设置和适当控制)，是在微服务架构中非常重要的一个保命项。
+       // 当在服务调用中没有设置超时时间，或设置的超时时间过长时，就会导致多服务下的整个调用链雪崩(响应缓慢)。
+       // grpc中建议始终设置截止日期(context.Deadline方法检查，若未设置截止时间，则返回false；context.WithTimeout方法设置默认超时时间)。
+       var opts []grpc.DialOption
+       opts = append(opts, grpc.WithUnaryInterceptor(
+           grpc_middleware.ChainUnaryClient(
+               middleware.UnaryCtxTimeout(),
+               middleware.ClientTracing(),
+           ),
+       ))
+       
+       opts = append(opts, grpc.WithStreamInterceptor(
+           grpc_middleware.ChainStreamClient(
+               middleware.UnaryCtxTimeout(),
+               middleware.ClientTracing(),
+           ),
+       ))
+
+       clientConn, err := grpc.DialContext(ctx, target, opts...)
+       ```   
+
+     由于客户端和服务端有各自的一元拦截器和流拦截器，因此，在gRPC中，共有四种类型的拦截器：
+     - 一元拦截器 Unary Interceptor：拦截和处理一元RPC调用
+     - 流拦截器 Stream Interceptor: 拦截和处理流式RPC调用
+     - 客户端
+       - 一元拦截器：类型为UnaryClientInterceptor，实现通常分为三部分：预处理、调用RPC方法和后处理。
+       
+       ```
+       type UnaryClientInterceptor func(
+           ctx context.Context,
+           method string,
+           req,
+           reply interface{},
+           cc *ClientConn, // 客户端连接句柄
+           invoker UnaryInvoker, // 所调用的RPC方法
+           opts ...CallOption, // 调用的配置
+       ) error
+       ```
+       
+       - 流拦截器：类型为StreamClientInterceptor，实现包括预处理和流操作拦截两部分，不能在事后进行RPC方法调用和后处理，只能拦截用户对流的操作。
+       
+       ```
+       type StreamClientInterceptor func(
+           ctx context.Context,
+           desc *StreamDesc,
+           cc *ClientConn, // 客户端连接句柄
+           method string, 
+           streamer Streamer,
+           opts ...CallOption, // 调用的配置
+       ) (ClientStream, error)
+       ```
+
+     - 服务端
+       - 一元拦截器：类型为UnaryServerInterceptor。
+       
+       ```
+       type UnaryClientInterceptor func(
+           ctx context.Context,
+           req, 
+           info *UnaryServerInfo, // RPC方法的所有信息
+           handler UnaryHandler, // RPC方法本身
+       ) (resp interface{}, err error)
+       ```
+
+       - 流拦截器
+       
+       ```
+       type UnaryClientInterceptor func(
+           srv interface{}, 
+           ss ServerStream,
+           info *StreamServerInfo, // RPC方法的所有信息
+           handler StreamHandler, // RPC方法本身
+       ) error
+       ```
+
+
    - metadata 和 RPC 自定义认证
    - 链路追踪
    - gRPC 服务注册和发现
