@@ -369,7 +369,16 @@
 
    - metadata 和 RPC 自定义认证
    
-     
+     在HTTP/1.1中，通常直接操纵Header来传递数据，而对于gRPC来讲，基于HTTP/2，本质上也可以通过Header来进行传递，但不会直接的去操纵它，而是通过gRPC中的metadata进行调用过程中的数据传递和操纵。
+     需要注意，使用metadata的前提，需要使用的库进行支持。
+     在gRPC中，metadata实际上是一个map结构，一个字符串与字符串切片的映射结构：`type MD map[string][]string`。
+     `metadata.New`方法创建的metadata会直接被转换为对应的MD结构；`metadata.Pairs`方法创建的metadata会以奇数来配对，并且所有的Key默认都被转为小写，若有同名Key，将会追加到对应 Key 的切片（slice）上。
+     在gRPC中，metadata可分为传入用的metadata和传出用的metadata两种，为了防止metadata从入站RPC直接转发到其出站RPC的情况(issues #1148)，并提供了两种方法分别进行设置：
+     - NewIncomingContext：创建一个附加了传入 metadata 的新上下文，仅供自身的 gRPC 服务端内部使用(IncomingContext)。
+     - NewOutgoingContext：创建一个附加了传出 metadata 的新上下文，可供外部的 gRPC 客户端、服务端使用(OutgoingContext)。
+     在metadata获取上，也分为两个方法，分别是 FromIncomingContext 和 NewOutgoingContext。
+     在内部进行了Key的区分，用指定的Key读取相应的metadata，以防止造成脏读。`推荐对Key的设置，使用一个结构体去定义`。
+     注意：新增metadata信息时，务必使用Append类别的方法(e.g. AppendToOutgoingContext)，若直接创建一个全新的metadata，则会导致原有的metadata信息丢失。
 
    - 链路追踪
    - gRPC 服务注册和发现
