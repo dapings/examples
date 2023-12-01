@@ -6,6 +6,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+// 基于TextMap模式，对照实现了 metadata 的设置和读取方法。
+
 // MetadataTextMap implements opentracing TextMap Reader, Writer.
 type MetadataTextMap struct {
 	metadata.MD

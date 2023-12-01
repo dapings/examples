@@ -16,10 +16,12 @@ import (
 )
 
 func ServerTracing(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	// 读取RPC方法传入的上下文信息，解析出metadata
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		md = metadata.New(nil)
 	}
+	// 从给定的载体中解码出SpanContext实例，并创建和设置本次Span的标签信息
 	parentSpanCtx, _ := global.Tracer.Extract(opentracing.TextMap, meta.MetadataTextMap{MD: md})
 	spanOpts := []opentracing.StartSpanOption{
 		opentracing.Tag{
@@ -32,6 +34,7 @@ func ServerTracing(ctx context.Context, req any, info *grpc.UnaryServerInfo, han
 	span := global.Tracer.StartSpan(info.FullMethod, spanOpts...)
 	defer span.Finish()
 
+	// 根据当前Span返回一个新的context，以便后续使用
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	return handler(ctx, req)
 }

@@ -18,13 +18,17 @@ func ClientTracing() grpc.UnaryClientInterceptor {
 		var (
 			parentSpanCtx opentracing.SpanContext
 			spanOpts      []opentracing.StartSpanOption
-			parentSpan    = opentracing.SpanFromContext(ctx)
+			// 解析上下文信息
+			parentSpan = opentracing.SpanFromContext(ctx)
 		)
+		// 检查 是否包含上一级的跨度信息
+		// 若存在，则获取上一级的上下文信息，作为本次跨度的父级
 		if parentSpan != nil {
 			parentSpanCtx = parentSpan.Context()
 			spanOpts = append(spanOpts, opentracing.ChildOf(parentSpanCtx))
 		}
 		spanOpts = append(spanOpts, []opentracing.StartSpanOption{
+			// 创建和设置本次跨度的标签信息
 			opentracing.Tag{Key: string(ext.Component), Value: global.GRPCSpanTagVal},
 			ext.SpanKindRPCClient,
 		}...)
@@ -32,6 +36,7 @@ func ClientTracing() grpc.UnaryClientInterceptor {
 		span := global.Tracer.StartSpan(method, spanOpts...)
 		defer span.Finish()
 
+		// 对传出的md信息进行转换，把它设置到新的上下文信息中，以便后续使用
 		md, ok := metadata.FromOutgoingContext(ctx)
 		if !ok {
 			md = metadata.New(nil)

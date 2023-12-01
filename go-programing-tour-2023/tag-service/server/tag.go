@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/global"
+	"github.com/dapings/examples/go-programing-tour-2023/tag-service/internal/middleware"
 	blogapi "github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/api"
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/errcode"
+	"github.com/dapings/examples/go-programing-tour-2023/tag-service/pkg/rpc"
 	pb "github.com/dapings/examples/go-programing-tour-2023/tag-service/protos"
+	grpcmiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -21,6 +25,9 @@ func NewTagServer() *TagServer {
 }
 
 func (t *TagServer) GetTagList(ctx context.Context, r *pb.GetTagListRequest) (*pb.GetTagListReply, error) {
+	// 对服务进行内部调用，模拟类似gRPC服务内调的效果
+	_, _ = t.internalGetTagList(ctx, r)
+
 	if err := t.auth.check(ctx); err != nil {
 		return nil, err
 	}
@@ -75,4 +82,34 @@ func (a *Auth) check(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// 模拟类似gRPC服务内调的效果
+func (t *TagServer) internalGetTagList(ctx context.Context, _ *pb.GetTagListRequest) (*pb.GetTagListReply, error) {
+	clientConn, err := rpc.GetClientConn(ctx, global.TagServerAddr,
+		// 客户端拦截器的相关注册行为是在调用grpc.Dial或grpc.DialContext之前，通过DialOption配置选项进行注册的。
+		[]grpc.DialOption{grpc.WithUnaryInterceptor(
+			grpcmiddleware.ChainUnaryClient(
+				middleware.UnaryCtxTimeout(),
+				middleware.ClientTracing(),
+			),
+		)})
+	if err != nil {
+		return nil, errcode.ToGRPCError(errcode.Fail)
+	}
+	defer func(clientConn *grpc.ClientConn) {
+		err := clientConn.Close()
+		if err != nil {
+			_ = clientConn.Close()
+		}
+	}(clientConn)
+
+	// 业务逻辑：查询标签列表
+	tagServiceClient := pb.NewTagServiceClient(clientConn)
+	resp, err := tagServiceClient.GetTagList(ctx, &pb.GetTagListRequest{Name: "Go"})
+	if err != nil {
+		return nil, errcode.ToGRPCError(errcode.Fail)
+	}
+
+	return resp, nil
 }

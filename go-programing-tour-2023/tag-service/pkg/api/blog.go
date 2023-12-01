@@ -58,7 +58,9 @@ func (a *API) httpGet(ctx context.Context, urlPath string) ([]byte, error) {
 	}
 
 	// tracing
-	span, _ := opentracing.StartSpanFromContext(ctx,
+	// 解析上下文信息，创建并设置当前跨度的信息和标签内容(需传入上下文信息，保证链路完整性)
+	// 传入附带的信息，并把它设置到对应的链路信息上；最后进行调用，并返回新的上下文，以便后续使用
+	span, newCtx := opentracing.StartSpanFromContext(ctx,
 		"HTTP GET: "+a.URL,
 		opentracing.Tag{Key: string(ext.Component), Value: global.HTTPSpanTagVal},
 	)
@@ -67,7 +69,7 @@ func (a *API) httpGet(ctx context.Context, urlPath string) ([]byte, error) {
 		span.Context(), opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(req.Header),
 	)
 
-	req = req.WithContext(context.Background())
+	req = req.WithContext(newCtx)
 	client := http.Client{Timeout: 60 * time.Second} // default 60 * time.Second timeout
 	resp, err := client.Do(req)
 	if err != nil {
@@ -81,6 +83,7 @@ func (a *API) httpGet(ctx context.Context, urlPath string) ([]byte, error) {
 	}(resp.Body)
 	defer span.Finish()
 
+	// 读取消息实体，在实际封装中可以将其抽离
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
