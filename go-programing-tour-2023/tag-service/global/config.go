@@ -2,6 +2,8 @@ package global
 
 const (
 	ServiceName = "tag-service"
+	AppKey      = "tour"
+	AppSecret   = "tag-service"
 )
 
 var (
