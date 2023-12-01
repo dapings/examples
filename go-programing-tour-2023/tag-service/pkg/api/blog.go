@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/tag-service/global"
 	"github.com/opentracing/opentracing-go"
@@ -67,7 +68,7 @@ func (a *API) httpGet(ctx context.Context, urlPath string) ([]byte, error) {
 	)
 
 	req = req.WithContext(context.Background())
-	client := http.Client{} // default 60 * time.Second timeout
+	client := http.Client{Timeout: 60 * time.Second} // default 60 * time.Second timeout
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err

@@ -271,8 +271,8 @@
    - gRPC 拦截器
    
      在每个RPC方法的前面或后面做统一的特殊处理，如鉴权校验、上下文的超时控制、请求的日志记录等，使用拦截器(Interceptor)定制，不直接侵入业务代码。
-     一种类型的拦截器只允许设置一个。gpc-go #935明确得知：官方仅提供了一个拦截器的钩子，以便在其中构建各种复杂的拦截器模式，而不会遇到多个拦截器的执行顺序问题，同时还能保持grpc-go自身的简介性，尽可能最小化公共API。
-     将不同的功能设计为为同的拦截器：
+     一种类型的拦截器只允许设置一个。gpc-go issues #935明确得知：官方仅提供了一个拦截器的钩子，以便在其中构建各种复杂的拦截器模式，而不会遇到多个拦截器的执行顺序问题，同时还能保持grpc-go自身的简介性，尽可能最小化公共API。
+     将不同的功能设计为不同的拦截器：
      - 自己实现一套多拦截器的逻辑(拦截器中调用拦截器)
      - 直接使用grpc应用生态(grpc-ecosystem)中的go-grpc-middleware提供的grpc.UnaryInterceptor,grpc.StreamInterceptor， 在grpc.*Interceptor中嵌套grpc_middleware.ChainUnaryServer或grpc_middleware.ChainUnaryClient(拦截器数量大于1时，每个递归的拦截器都会不断地执行，最后才去真正执行代表RPC方法的handler)，以链式方式达到用多个拦截器的目的。
        ```
@@ -311,6 +311,7 @@
 
        clientConn, err := grpc.DialContext(ctx, target, opts...)
        ```   
+       关于链式拦截器上，也就是多拦截器的使用，推荐go-grpc-middleware的方案，不过从`grpc v1.28.0`起，有社区朋友贡献并合并了链式拦截器的相关方法（参见 issues #935）。
 
      由于客户端和服务端有各自的一元拦截器和流拦截器，因此，在gRPC中，共有四种类型的拦截器：
      - 一元拦截器 Unary Interceptor：拦截和处理一元RPC调用
@@ -366,8 +367,10 @@
        ) error
        ```
 
-
    - metadata 和 RPC 自定义认证
+   
+     
+
    - 链路追踪
    - gRPC 服务注册和发现
    - 实现自定义的 protoc 插件
