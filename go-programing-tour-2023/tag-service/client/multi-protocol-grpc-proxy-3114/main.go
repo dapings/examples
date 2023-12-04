@@ -25,6 +25,7 @@ func main() {
 	}
 
 	// creates a grpc.Watcher for a target to track its resolution changes.
+	// etcd SDK对官方Resolver,Watcher两个接口的具体实现。
 	r := &naming.GRPCResolver{Client: cli}
 	target := fmt.Sprintf("/etcdv3://go-programming-tour/grpc/%s", global.ServiceName)
 	// 设置负载均衡器(策略：round robin)和连接建立的要求(Block: 达到Ready状态才返回)。
