@@ -53,9 +53,17 @@ func runServer(port string) error {
 	if err != nil {
 		return err
 	}
-	defer etcdClient.Close()
+	defer func(etcdClient *clientv3.Client) {
+		err := etcdClient.Close()
+		if err != nil {
+			_ = etcdClient.Close()
+		}
+	}(etcdClient)
 
+	// 服务名是服务提供者的唯一标识，也常被用作各项服务信息的协调凭证。
 	target := fmt.Sprintf("/etcdv3://go-programming-tour/grpc/%s", global.ServiceName)
+	// 官方提供的grpcproxy.Register方法，进行服务信息注册，租约时间为60s。
+	// 如果服务一直运行，租约会不断进行续约(定时维持)；如果服务失效，服务将在租约到期时被删除。
 	grpcproxy.Register(etcdClient, target, ":"+port, 60)
 
 	return http.ListenAndServe(":"+port, gRPCHandlerFunc(gRPCServer, httpMux))
