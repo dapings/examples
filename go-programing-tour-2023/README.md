@@ -428,6 +428,16 @@
      目前可实现负载均衡的技术方案有很多，如在客户端负载上，可基于consul实现，而在服务端负载上，可基于nginx(1.13起支持grpc)、kubernetes、istio、linkerd等外部组件实现类似的负载均衡，或服务发现或注册的相关功能。
 
    - 实现自定义的 protoc 插件
+
+     在开发grpc+protobuf的相关服务时，用到了许多protoc相关的插件，来实现各种功能：
+     |插件名称|对应的命令|
+     |---|---|
+     |protoc-gen-go|--go_out|
+     |protoc-gen-grpc-gateway|--grpc-gateway_out|
+     |protoc-gen-swagger|--swagger_out|
+   
+     在查看grpc插件时，发现其实现了很多方法，但只需要重点关注`generator.Plugin`的相关接口。在实现自定义插件时，只需满足Plugin接口的定义，就可以无缝地接入protoc。grpc插件是根据Plugin接口的主体流程来流转的。
+
    - 对 gRPC 接口进行版本管理
    - 常见问题讨论
 
