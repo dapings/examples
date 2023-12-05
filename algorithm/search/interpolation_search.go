@@ -1,6 +1,6 @@
 package search
 
-// 适用于有序且分布均匀的数据集
+// 插值查找适用于有序且分布均匀的数据集
 func interpolationSearch(arr []int, val int) int {
 	low := 0
 	high := len(arr) - 1
