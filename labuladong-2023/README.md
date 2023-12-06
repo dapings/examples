@@ -13,3 +13,4 @@
 [4]: https://github.com/shuzijun/leetcode-editor/tree/master "leetcode editor plugins"
 [5]: https://github.com/shuzijun/leetcode-editor/tree/master/doc "leetcode editor docs"
 [6]: https://github.com/shuzijun/leetcode-editor/blob/master/doc/LoginHelp_ZH.md "leetcode 登录配置"
+[6]: https://github.com/shuzijun/leetcode-editor/blob/master/doc/CustomCode_ZH.md "自定义代码生成介绍"
