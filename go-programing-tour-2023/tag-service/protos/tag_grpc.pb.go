@@ -8,6 +8,7 @@ package protos
 
 import (
 	context "context"
+	"errors"
 	
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -24,6 +25,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type TagServiceClient interface {
 	GetTagList(ctx context.Context, in *GetTagListRequest, opts ...grpc.CallOption) (*GetTagListReply, error)
+	WithOrgCode(ctx context.Context, orgCode string) context.Context
 }
 
 type tagServiceClient struct {
@@ -34,7 +36,22 @@ func NewTagServiceClient(cc grpc.ClientConnInterface) TagServiceClient {
 	return &tagServiceClient{cc}
 }
 
+type orgCodeKey struct {}
+
+func (c *tagServiceClient) WithOrgCode(ctx context.Context, orgCode string) context.Context {
+	return context.WithValue(ctx, orgCodeKey{}, orgCode)
+}
+
+func (c *tagServiceClient) OrgCode(ctx context.Context) (string, bool) {
+	v, ok := ctx.Value(orgCodeKey{}).(string)
+	return v, ok
+}
+
 func (c *tagServiceClient) GetTagList(ctx context.Context, in *GetTagListRequest, opts ...grpc.CallOption) (*GetTagListReply, error) {
+	orgCode, ok := c.OrgCode(ctx)
+	if !ok || orgCode == "" {
+		return nil, errors.New("请调用 WithOrgCode 方法设置租户标识")
+	}
 	out := new(GetTagListReply)
 	err := c.cc.Invoke(ctx, "/protos.TagService/GetTagList", in, out, opts...)
 	if err != nil {
