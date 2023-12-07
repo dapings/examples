@@ -33,6 +33,17 @@
    - 拷贝插件模板：golang/protobuf，进入 protoc-gen-go 目录，打开grpc目录中的grpc.go文件，调整包名、原本的gRPC结构体及其方法，并修改插件的名称。
    - 进行二次开发：对gRPC client方法进行租户标识(orgcode)的获取和判断。若不存在，则直接返回相应的错误信息。
      因此，需要编写获取和设置租户标识值的方法，编写判定租户标识值是否正确的方法。
+   - 验证生成
+     ```shell
+     go build . && mv ./protoc-gen-go-tour $GOPATH/bin/
+     
+     # 根据tag.proto文件生成
+     #--go-tour_out=plugins=tour:./protos/
+     protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+     --go_out=./protos/ --go-tour_out=./protos/ ./protos/*.proto
+     ```
+     
+     在客户端调用WithOrgCode方法设置租户标识。
 
 小结：
 上下文设置的方法，实际上，侵入了client interface。而当拥有顶级公共库时，可以将这类方法抽到公共库中，然后直接调用。这样既不会影响client interface的默认定义，只保留核心的调度逻辑在自定义插件的生成逻辑中，又能实现相对的解耦。
