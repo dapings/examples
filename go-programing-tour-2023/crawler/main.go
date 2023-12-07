@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 func main() {
@@ -31,5 +33,17 @@ func main() {
 		return
 	}
 
-	log.Printf("body:%s", string(body))
+	numLinks := strings.Count(string(body), "<a")
+	log.Printf("homepage has %d links!\n", numLinks)
+
+	numLinks = bytes.Count(body, []byte("<a"))
+	log.Printf("homepage has %d links!\n", numLinks)
+
+	exist := strings.Contains(string(body), "疫情")
+	log.Printf("是否存在疫情:%v\n", exist)
+
+	exist = bytes.Contains(body, []byte("疫情"))
+	log.Printf("是否存在疫情:%v\n", exist)
+
+	// log.Printf("body:%s", string(body))
 }
