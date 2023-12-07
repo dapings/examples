@@ -8,15 +8,14 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
-
-	"github.com/antchfx/htmlquery"
 )
 
-var xpathReg = `//div[@class="news_li"]/h2/a[@target="_blank"]`
+var cssReg = "div.news_li h2 a[target=_blank]"
 
 func main() {
 	url := "https://www.thepaper.cn/"
@@ -27,17 +26,18 @@ func main() {
 		return
 	}
 
-	// 解析HTML文本
-	doc, err := htmlquery.Parse(bytes.NewReader(body))
+	// 加载HTML文本
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
 	if err != nil {
-		log.Printf("htmlquery.Parse filed: %v", err)
+		log.Printf("load content filed: %v", err)
 		return
 	}
-	// 通过XPath语法查找符合条件的节点
-	nodes := htmlquery.Find(doc, xpathReg)
-	for _, node := range nodes {
-		log.Println("fetch card news:", node.FirstChild.Data)
-	}
+	// 根据CSS标签选择器的语法查找匹配的标签，并遍历输出a标签中的文本
+	doc.Find(cssReg).Each(func(i int, s *goquery.Selection) {
+		// 获取匹配的元素文本
+		title := s.Text()
+		log.Printf("review %d: %s\n", i, title)
+	})
 
 	handleLinks(body)
 }

@@ -29,7 +29,24 @@
     ```
 
 3. CSS选择器
+
+    CSS是一种定义HTML文档中元素样式的语言。
+    第三库`github.com/PuerkitoBio/goquery`支持CSS选择器。
+    ```text
+    var cssReg = "div.news_li h2 a[target=_blank]"
+    // 加载HTML文本
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+    // 根据CSS标签选择器的语法查找匹配的标签，并遍历输出a标签中的文本
+	doc.Find(cssReg).Each(func(i int, s *goquery.Selection) {
+		// 获取匹配的元素文本
+		title := s.Text()
+		log.Printf("review %d: %s\n", i, title)
+	})
+    ```
+
 4. 标准库：strings,bytes,text/encoding,html/charset
+
+小结：由于正则表达式通常比较复杂且性能低下，在实际运用过程中，通常采用XPath,CSS选择器进行结构化查询。XPath是为XML文档设计的，而CSS选择器是为HTML文本专门设计的，更加简单主流。
 
 
 - https://github.com/dreamerjackson/crawler “聚沙万塔-Go语言构建高性能、分布式爬虫项目”
