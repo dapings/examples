@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"golang.org/x/net/html/charset"
@@ -14,13 +15,24 @@ import (
 	"golang.org/x/text/transform"
 )
 
+// regexp.MustCompile函数会在编译时，提前解析好正则表达式内容，在一定程度上加速程序的运行。
+// [\s\S]*?，[\s\S] 任意字符串，*将前面任意字符匹配0次或无数次，?非贪婪匹配，找到第一次出现的地方，就认定匹配成功。
+// 由于回溯的原因，复杂的正则表达式，可能比较消耗CPU资源。
+var headerReg = regexp.MustCompile(`<div class="news_li"[\s\S]*?<h2>[\s\S]*?<a.*?target="_blank">([\s\S]*?)</a>`)
+
 func main() {
-	// url := "https://www.thepaper.cn/"
-	url := "https://www.chinanews.com.cn/"
+	url := "https://www.thepaper.cn/"
+	// url := "https://www.chinanews.com.cn/"
 	body, err := Fetch(url)
 	if err != nil {
 		log.Printf("read content failed: %v", err)
 		return
+	}
+
+	// 一个三维字节数组，第三层是字符实际对应的字节数组
+	matches := headerReg.FindAllSubmatch(body, -1)
+	for _, m := range matches {
+		log.Println("fetch card news:", string(m[1][1]))
 	}
 
 	handleLinks(body)
@@ -69,6 +81,9 @@ func handleLinks(body []byte) {
 	if len(body) == 0 {
 		return
 	}
+
+	numNews := bytes.Count(body, []byte("news_"))
+	log.Printf("homepage has %d news class!\n", numNews)
 
 	numLinks := strings.Count(string(body), "<a")
 	log.Printf("homepage has %d links!\n", numLinks)
