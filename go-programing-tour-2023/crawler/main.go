@@ -11,7 +11,7 @@ import (
 func main() {
 	url := "https://www.thepaper.cn/"
 	// url := "https://www.chinanews.com.cn/"
-	// url := "https://google.com"
+	// url := "https://google.com.hk"
 
 	// douban timeout
 	// url := "https://book.douban.com/subject/1007305/"

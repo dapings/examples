@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
@@ -50,11 +51,17 @@ func (BaseFetch) Get(url string) ([]byte, error) {
 
 type BrowserFetch struct {
 	Timeout time.Duration
+	Proxy   proxy.ProxyFunc
 }
 
 // Get 模拟浏览器访问
 func (b BrowserFetch) Get(url string) ([]byte, error) {
 	client := &http.Client{Timeout: b.Timeout}
+	if b.Proxy != nil {
+		transport := http.DefaultTransport.(*http.Transport)
+		transport.Proxy = b.Proxy
+		client.Transport = transport
+	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		log.Printf("http new request filed: %v\n", err)
