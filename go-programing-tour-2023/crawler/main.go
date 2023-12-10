@@ -1,11 +1,10 @@
 package main
 
 import (
-	"io"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
-	log2 "github.com/dapings/examples/go-programing-tour-2023/crawler/log"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"go.uber.org/zap"
@@ -13,22 +12,19 @@ import (
 )
 
 func main() {
-	plugin, c := log2.NewFilePlugin("./log.txt", zapcore.InfoLevel)
-	defer func(c io.Closer) {
-		err := c.Close()
-		if err != nil {
-			_ = c.Close()
-		}
-	}(c)
-	logger := log2.NewLogger(plugin)
-	logger.Info("log init")
+	// logger
+	plugin := log.NewStdoutPlugin(zapcore.InfoLevel)
+	logger := log.NewLogger(plugin)
+	logger.Info("logger init")
 
+	// proxy
 	proxyURLs := []string{"http://127.0.0.1:8888", "http://127.0.0.1:8888"}
 	proxyFunc, err := proxy.RoundRobinProxySwitcher(proxyURLs...)
 	if err != nil {
 		logger.Error("round robin proxy switcher failed", zap.Error(err))
 		return
 	}
+
 	url := "https://www.thepaper.cn/"
 	// url := "https://www.chinanews.com.cn/"
 	// url := "https://google.com.hk"
