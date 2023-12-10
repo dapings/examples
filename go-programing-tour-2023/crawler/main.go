@@ -1,19 +1,32 @@
 package main
 
 import (
-	"log"
+	"io"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	log2 "github.com/dapings/examples/go-programing-tour-2023/crawler/log"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func main() {
+	plugin, c := log2.NewFilePlugin("./log.txt", zapcore.InfoLevel)
+	defer func(c io.Closer) {
+		err := c.Close()
+		if err != nil {
+			_ = c.Close()
+		}
+	}(c)
+	logger := log2.NewLogger(plugin)
+	logger.Info("log init")
+
 	proxyURLs := []string{"http://127.0.0.1:8888", "http://127.0.0.1:8888"}
 	proxyFunc, err := proxy.RoundRobinProxySwitcher(proxyURLs...)
 	if err != nil {
-		log.Printf("round robin proxy switcher failed: %v\n", err)
+		logger.Error("round robin proxy switcher failed", zap.Error(err))
 		return
 	}
 	url := "https://www.thepaper.cn/"
@@ -25,9 +38,11 @@ func main() {
 	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc}
 	body, err := f.Get(url)
 	if err != nil {
-		log.Printf("read content failed: %v", err)
+		logger.Error("read content failed", zap.Error(err))
 		return
 	}
+
+	logger.Info("get content", zap.Int("len", len(body)))
 
 	collect.HandleLinks(body)
 
