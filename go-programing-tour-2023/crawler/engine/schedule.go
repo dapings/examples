@@ -5,17 +5,24 @@ import (
 	"go.uber.org/zap"
 )
 
-type ScheduleEngine struct {
+type Schedule struct {
 	reqChan    chan *collect.Request
 	workerChan chan *collect.Request
-	WorkCount  int
-	Fetcher    collect.Fetcher
-	Logger     *zap.Logger
 	out        chan collect.ParseResult
-	Seeds      []*collect.Request
+	options
 }
 
-func (s *ScheduleEngine) Run() {
+func NewSchedule(opts ...Option) *Schedule {
+	options := defaultOptions
+	for _, opt := range opts {
+		opt(&options)
+	}
+	s := &Schedule{}
+	s.options = options
+	return s
+}
+
+func (s *Schedule) Run() {
 	s.reqChan = make(chan *collect.Request)
 	s.workerChan = make(chan *collect.Request)
 	s.out = make(chan collect.ParseResult)
@@ -29,12 +36,13 @@ func (s *ScheduleEngine) Run() {
 	s.HandleResult()
 }
 
-func (s *ScheduleEngine) Schedule() {
+func (s *Schedule) Schedule() {
 	var reqQueue = s.Seeds
 	go func() {
 		for {
 			var req *collect.Request
 			var ch chan *collect.Request
+
 			if len(reqQueue) > 0 {
 				req = reqQueue[0]
 				reqQueue = reqQueue[1:]
@@ -49,12 +57,17 @@ func (s *ScheduleEngine) Schedule() {
 	}()
 }
 
-func (s *ScheduleEngine) CreateWork() {
+func (s *Schedule) CreateWork() {
 	for {
 		r := <-s.workerChan
 		body, err := s.Fetcher.Get(r)
+		if len(body) < 6000 {
+			s.Logger.Error("read content failed",
+				zap.Int("len", len(body)), zap.String("url", r.Url))
+		}
 		if err != nil {
-			s.Logger.Error("read content failed", zap.Error(err))
+			s.Logger.Error("read content failed",
+				zap.Error(err), zap.String("url", r.Url))
 			continue
 		}
 		s.Logger.Info("get content", zap.Int("len", len(body)))
@@ -63,7 +76,7 @@ func (s *ScheduleEngine) CreateWork() {
 	}
 }
 
-func (s *ScheduleEngine) HandleResult() {
+func (s *Schedule) HandleResult() {
 	for {
 		select {
 		case result := <-s.out:

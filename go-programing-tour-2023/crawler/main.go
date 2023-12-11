@@ -43,11 +43,11 @@ func main() {
 		})
 	}
 
-	s := engine.ScheduleEngine{
-		WorkCount: 5,
-		Fetcher:   f,
-		Logger:    logger,
-		Seeds:     seeds,
-	}
+	s := engine.NewSchedule(
+		engine.WithWorkCount(5),
+		engine.WithFetcher(f),
+		engine.WithLogger(logger),
+		engine.WithSeeds(seeds),
+	)
 	s.Run()
 }
