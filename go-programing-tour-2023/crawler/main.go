@@ -1,11 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -25,26 +26,38 @@ func main() {
 		return
 	}
 
-	url := "https://www.thepaper.cn/"
+	// url := "https://www.thepaper.cn/"
 	// url := "https://www.chinanews.com.cn/"
 	// url := "https://google.com.hk"
 
 	// douban timeout
 	// url := "https://book.douban.com/subject/1007305/"
 	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc}
-	body, err := f.Get(url)
-	if err != nil {
-		logger.Error("read content failed", zap.Error(err))
-		return
+	var workList []*collect.Request
+	for i := 0; i <= 0; i += 25 {
+		workList = append(workList, &collect.Request{
+			Url:       fmt.Sprintf(doubangroup.DiscussionURL, i),
+			Cookie:    doubangroup.Cookie,
+			ParseFunc: doubangroup.ParseURL,
+		})
 	}
+	for len(workList) > 0 {
+		items := workList
+		workList = nil
+		for _, item := range items {
+			body, err := f.Get(item.Url)
+			time.Sleep(1 * time.Second)
+			if err != nil {
+				logger.Error("read content failed", zap.Error(err))
+				continue
+			}
+			logger.Info("get content", zap.Int("len", len(body)))
 
-	logger.Info("get content", zap.Int("len", len(body)))
-
-	collect.HandleLinks(body)
-
-	var p parse.Parser = parse.CSSSelection{}
-	var cssReg = "div.news_li h2 a[target=_blank]"
-
-	p.WithHeaderSyn(cssReg)
-	p.ReadDocument(body)
+			res := item.ParseFunc(body, item)
+			for _, item := range res.Items {
+				logger.Info("result", zap.String("get url:", item.(string)))
+			}
+			workList = append(workList, res.Requests...)
+		}
+	}
 }
