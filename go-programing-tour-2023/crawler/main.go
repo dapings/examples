@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
@@ -32,32 +33,21 @@ func main() {
 
 	// douban timeout
 	// url := "https://book.douban.com/subject/1007305/"
-	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc}
-	var workList []*collect.Request
+	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc, Logger: logger}
+	var seeds []*collect.Request
 	for i := 0; i <= 0; i += 25 {
-		workList = append(workList, &collect.Request{
+		seeds = append(seeds, &collect.Request{
 			Url:       fmt.Sprintf(doubangroup.DiscussionURL, i),
 			Cookie:    doubangroup.Cookie,
 			ParseFunc: doubangroup.ParseURL,
 		})
 	}
-	for len(workList) > 0 {
-		items := workList
-		workList = nil
-		for _, item := range items {
-			body, err := f.Get(item.Url)
-			time.Sleep(1 * time.Second)
-			if err != nil {
-				logger.Error("read content failed", zap.Error(err))
-				continue
-			}
-			logger.Info("get content", zap.Int("len", len(body)))
 
-			res := item.ParseFunc(body, item)
-			for _, item := range res.Items {
-				logger.Info("result", zap.String("get url:", item.(string)))
-			}
-			workList = append(workList, res.Requests...)
-		}
+	s := engine.ScheduleEngine{
+		WorkCount: 5,
+		Fetcher:   f,
+		Logger:    logger,
+		Seeds:     seeds,
 	}
+	s.Run()
 }
