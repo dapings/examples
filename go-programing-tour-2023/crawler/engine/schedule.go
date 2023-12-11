@@ -60,10 +60,15 @@ func (s *Schedule) Schedule() {
 func (s *Schedule) CreateWork() {
 	for {
 		r := <-s.workerChan
+		if err := r.Check(); err != nil {
+			s.Logger.Error("check failed", zap.Error(err))
+			continue
+		}
 		body, err := s.Fetcher.Get(r)
 		if len(body) < 6000 {
 			s.Logger.Error("read content failed",
 				zap.Int("len", len(body)), zap.String("url", r.Url))
+			continue
 		}
 		if err != nil {
 			s.Logger.Error("read content failed",

@@ -1,6 +1,7 @@
 package collect
 
 import (
+	"errors"
 	"time"
 )
 
@@ -9,6 +10,8 @@ type (
 		Url       string
 		Cookie    string
 		WaitTime  time.Duration
+		Depth     int
+		MaxDepth  int
 		ParseFunc func([]byte, *Request) ParseResult
 	}
 
@@ -17,3 +20,11 @@ type (
 		Items    []any
 	}
 )
+
+func (r *Request) Check() error {
+	if r.Depth > r.MaxDepth {
+		return errors.New("max depth limit reached")
+	}
+
+	return nil
+}
