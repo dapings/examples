@@ -69,14 +69,14 @@ func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 		b.Logger.Error("http new request filed: ", zap.Error(err))
 		return nil, fmt.Errorf("http new request filed: %v", err)
 	}
-	if len(request.Cookie) > 0 {
-		req.Header.Set("Cookie", request.Cookie)
+	if len(request.Task.Cookie) > 0 {
+		req.Header.Set("Cookie", request.Task.Cookie)
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36")
 
 	resp, err := client.Do(req)
-	time.Sleep(request.WaitTime)
+	time.Sleep(request.Task.WaitTime)
 	if err != nil {
 		b.Logger.Error("fetch url error: ", zap.String("fetch url", request.Url), zap.Error(err))
 		return nil, err

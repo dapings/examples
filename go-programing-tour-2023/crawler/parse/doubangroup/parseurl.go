@@ -13,7 +13,7 @@ var (
 
 const (
 	urlListRe = `(https://www.douban.com/group/topic/[0-9a-z]+/)"[^>]*>([^<]+)</a>`
-	ContentRe = `<div class="topic-content">[\s\S]*?阳台[\s\S]*?<div`
+	ContentRe = `<div class="topic-content">[\s\S]*?阳台[\s\S]*?<div class="aside">`
 )
 
 func GetContent(contents []byte, url string) collect.ParseResult {
@@ -33,11 +33,9 @@ func ParseURL(contents []byte, req *collect.Request) collect.ParseResult {
 	for _, m := range matches {
 		u := string(m[1])
 		result.Requests = append(result.Requests, &collect.Request{
-			Url:      u,
-			Cookie:   req.Cookie,
-			WaitTime: req.WaitTime,
-			Depth:    req.Depth + 1,
-			MaxDepth: req.MaxDepth,
+			Task:  req.Task,
+			Url:   u,
+			Depth: req.Depth + 1,
 			ParseFunc: func(c []byte, request *collect.Request) collect.ParseResult {
 				return GetContent(c, u)
 			},
