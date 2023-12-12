@@ -5,98 +5,132 @@ import (
 	"go.uber.org/zap"
 )
 
-type Schedule struct {
-	reqChan    chan *collect.Request
-	workerChan chan *collect.Request
-	out        chan collect.ParseResult
+type Crawler struct {
+	out chan collect.ParseResult
 	options
 }
 
-func NewSchedule(opts ...Option) *Schedule {
+type Scheduler interface {
+	Schedule()
+	Push(...*collect.Request)
+	Pull() *collect.Request
+}
+
+type Schedule struct {
+	reqChan    chan *collect.Request
+	workerChan chan *collect.Request
+	reqQueue   []*collect.Request
+	Logger     *zap.Logger
+}
+
+func NewEngine(opts ...Option) *Crawler {
 	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
 	}
+	e := &Crawler{}
+	e.out = make(chan collect.ParseResult)
+	e.options = options
+	return e
+}
+
+func NewSchedule() *Schedule {
 	s := &Schedule{}
-	s.options = options
+	s.reqChan = make(chan *collect.Request)
+	s.workerChan = make(chan *collect.Request)
+
 	return s
 }
 
-func (s *Schedule) Run() {
-	s.reqChan = make(chan *collect.Request)
-	s.workerChan = make(chan *collect.Request)
-	s.out = make(chan collect.ParseResult)
+func (e *Crawler) Run() {
+	go e.Schedule()
 
-	go s.Schedule()
-
-	for i := 0; i < s.WorkCount; i++ {
-		go s.CreateWork()
+	for i := 0; i < e.WorkCount; i++ {
+		go e.CreateWork()
 	}
 
-	s.HandleResult()
+	e.HandleResult()
+}
+
+func (s *Schedule) Push(reqQueue ...*collect.Request) {
+	for _, req := range reqQueue {
+		s.reqChan <- req
+	}
+}
+
+func (s *Schedule) Pull() *collect.Request {
+	return <-s.workerChan
+}
+
+func (s *Schedule) Output() *collect.Request {
+	return <-s.workerChan
 }
 
 func (s *Schedule) Schedule() {
+	for {
+		var req *collect.Request
+		var ch chan *collect.Request
+
+		if len(s.reqQueue) > 0 {
+			req = s.reqQueue[0]
+			s.reqQueue = s.reqQueue[1:]
+			ch = s.workerChan
+		}
+		select {
+		case r := <-s.reqChan:
+			s.reqQueue = append(s.reqQueue, r)
+		case ch <- req:
+		}
+	}
+}
+
+func (e *Crawler) Schedule() {
 	var reqQueue []*collect.Request
-	for _, seed := range s.Seeds {
+	for _, seed := range e.Seeds {
 		seed.RootRequest.Task = seed
 		seed.RootRequest.Url = seed.Url
 		reqQueue = append(reqQueue, seed.RootRequest)
 	}
-	go func() {
-		for {
-			var req *collect.Request
-			var ch chan *collect.Request
-
-			if len(reqQueue) > 0 {
-				req = reqQueue[0]
-				reqQueue = reqQueue[1:]
-				ch = s.workerChan
-			}
-			select {
-			case r := <-s.reqChan:
-				reqQueue = append(reqQueue, r)
-			case ch <- req:
-			}
-		}
-	}()
+	go e.scheduler.Schedule()
+	go e.scheduler.Push(reqQueue...)
 }
 
-func (s *Schedule) CreateWork() {
+func (e *Crawler) CreateWork() {
 	for {
-		r := <-s.workerChan
+		r := e.scheduler.Pull()
 		if err := r.Check(); err != nil {
-			s.Logger.Error("check failed", zap.Error(err))
+			e.Logger.Error("check failed", zap.Error(err))
 			continue
 		}
-		body, err := s.Fetcher.Get(r)
+		body, err := r.Task.Fetcher.Get(r)
 		if len(body) < 6000 {
-			s.Logger.Error("read content failed",
+			e.Logger.Error("read content failed",
 				zap.Int("len", len(body)), zap.String("url", r.Url))
 			continue
 		}
 		if err != nil {
-			s.Logger.Error("read content failed",
+			e.Logger.Error("read content failed",
 				zap.Error(err), zap.String("url", r.Url))
 			continue
 		}
-		s.Logger.Info("get content", zap.Int("len", len(body)))
+		e.Logger.Info("get content", zap.Int("len", len(body)))
 		result := r.ParseFunc(body, r)
-		s.out <- result
+
+		if len(result.Requests) > 0 {
+			go e.scheduler.Push(result.Requests...)
+		}
+
+		e.out <- result
 	}
 }
 
-func (s *Schedule) HandleResult() {
+func (e *Crawler) HandleResult() {
 	for {
 		select {
-		case result := <-s.out:
-			for _, request := range result.Requests {
-				s.reqChan <- request
-			}
-
+		case result := <-e.out:
 			for _, item := range result.Items {
 				// TODO: store
-				s.Logger.Sugar().Info("get result", item)
+				e.Logger.Sugar().Info("get result", item)
 			}
 		}
 	}
