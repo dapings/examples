@@ -35,14 +35,14 @@ func main() {
 	// url := "https://book.douban.com/subject/1007305/"
 	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc, Logger: logger}
 	var seeds = make([]*collect.Task, 0, 1000)
-	for i := 25; i <= 25; i += 25 {
+	for i := 0; i < 25; i += 25 {
 		seeds = append(seeds, &collect.Task{
 			Url:         fmt.Sprintf(doubangroup.DiscussionURL, i),
 			WaitTime:    1 * time.Second,
 			MaxDepth:    5,
 			Fetcher:     f,
 			Cookie:      doubangroup.Cookie,
-			RootRequest: &collect.Request{ParseFunc: doubangroup.ParseURL},
+			RootRequest: &collect.Request{Method: "GET", ParseFunc: doubangroup.ParseURL},
 		})
 	}
 
