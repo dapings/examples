@@ -20,12 +20,14 @@ const (
 )
 
 var DoubangroupTask = &collect.Task{
-	Name:     FindSumRoomTaskName,
-	Cookie:   cookie,
-	WaitTime: 1 * time.Second,
-	MaxDepth: 5,
+	Property: collect.Property{
+		Name:     FindSumRoomTaskName,
+		Cookie:   cookie,
+		WaitTime: 1 * time.Second,
+		MaxDepth: 5,
+	},
 	Rule: collect.RuleTree{
-		Root: func() []*collect.Request {
+		Root: func() ([]*collect.Request, error) {
 			var roots []*collect.Request
 			for i := 0; i < 25; i += 25 {
 				roots = append(roots, &collect.Request{
@@ -35,7 +37,7 @@ var DoubangroupTask = &collect.Task{
 					RuleName: "解析网站URL",
 				})
 			}
-			return roots
+			return roots, nil
 		},
 		Trunk: map[string]*collect.Rule{
 			"解析网站URL": {ParseURL},
@@ -44,17 +46,17 @@ var DoubangroupTask = &collect.Task{
 	},
 }
 
-func GetSunRoom(ctx *collect.Context) collect.ParseResult {
+func GetSunRoom(ctx *collect.Context) (collect.ParseResult, error) {
 	re := regexp.MustCompile(ContentRe)
 	ok := re.Match(ctx.Body)
 	if !ok {
-		return collect.ParseResult{Items: make([]any, 0)}
+		return collect.ParseResult{Items: make([]any, 0)}, nil
 	}
 
-	return collect.ParseResult{Items: []any{ctx.Req.Url}}
+	return collect.ParseResult{Items: []any{ctx.Req.Url}}, nil
 }
 
-func ParseURL(ctx *collect.Context) collect.ParseResult {
+func ParseURL(ctx *collect.Context) (collect.ParseResult, error) {
 	re := regexp.MustCompile(urlListRe)
 	matches := re.FindAllSubmatch(ctx.Body, -1)
 	result := collect.ParseResult{}
@@ -68,5 +70,5 @@ func ParseURL(ctx *collect.Context) collect.ParseResult {
 			RuleName: "解析阳台房",
 		})
 	}
-	return result
+	return result, nil
 }

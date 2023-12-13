@@ -5,13 +5,16 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
+	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
 )
 
 func init() {
 	Store.Add(doubangroup.DoubangroupTask)
+	Store.AddJSTask(doubangroup.DoubangroupJSTask)
 }
 
+// Store 全局蜘蛛实例
 var Store = &CrawlerStore{
 	list: make([]*collect.Task, 0),
 	hash: make(map[string]*collect.Task),
@@ -32,6 +35,62 @@ type CrawlerStore struct {
 }
 
 func (c *CrawlerStore) Add(task *collect.Task) {
+	c.hash[task.Name] = task
+	c.list = append(c.list, task)
+}
+
+func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
+	task := &collect.Task{
+		Property: m.Property,
+	}
+	task.Rule.Root = func() ([]*collect.Request, error) {
+		// allocate a new JavaScript runtime
+		vm := otto.New()
+		err := vm.Set("AddJsReq", collect.AddJsReq)
+		if err != nil {
+			return nil, err
+		}
+		v, evalErr := vm.Eval(m.Root)
+		if evalErr != nil {
+			return nil, evalErr
+		}
+		e, exportErr := v.Export()
+		if exportErr != nil {
+			return nil, exportErr
+		}
+		return e.([]*collect.Request), nil
+	}
+
+	for _, r := range m.Rules {
+		parseFunc := func(parse string) func(ctx *collect.Context) (collect.ParseResult, error) {
+			return func(ctx *collect.Context) (collect.ParseResult, error) {
+				// allocate a new JavaScript runtime
+				vm := otto.New()
+				err := vm.Set("ctx", ctx)
+				if err != nil {
+					return collect.ParseResult{}, err
+				}
+				v, evalErr := vm.Eval(parse)
+				if evalErr != nil {
+					return collect.ParseResult{}, evalErr
+				}
+				e, exportErr := v.Export()
+				if exportErr != nil {
+					return collect.ParseResult{}, exportErr
+				}
+				if e == nil {
+					return collect.ParseResult{}, exportErr
+				}
+				return e.(collect.ParseResult), exportErr
+			}
+		}(r.ParseFunc)
+
+		if task.Rule.Trunk == nil {
+			task.Rule.Trunk = make(map[string]*collect.Rule, 0)
+		}
+		task.Rule.Trunk[r.Name] = &collect.Rule{ParseFunc: parseFunc}
+	}
+
 	c.hash[task.Name] = task
 	c.list = append(c.list, task)
 }
@@ -129,7 +188,11 @@ func (e *Crawler) Schedule() {
 	for _, seed := range e.Seeds {
 		task := Store.hash[seed.Name]
 		task.Fetcher = seed.Fetcher
-		rootReqs := task.Rule.Root()
+		rootReqs, err := task.Rule.Root()
+		if err != nil {
+			e.Logger.Error("get root failed", zap.Error(err))
+			continue
+		}
 		for _, req := range rootReqs {
 			req.Task = task
 		}
@@ -168,10 +231,14 @@ func (e *Crawler) CreateWork() {
 
 		e.Logger.Info("get content", zap.Int("len", len(body)))
 		rule := req.Task.Rule.Trunk[req.RuleName]
-		result := rule.ParseFunc(&collect.Context{
+		result, err := rule.ParseFunc(&collect.Context{
 			Body: body,
 			Req:  req,
 		})
+		if err != nil {
+			e.Logger.Error("rule.ParseFunc failed", zap.Error(err))
+			continue
+		}
 
 		if len(result.Requests) > 0 {
 			go e.scheduler.Push(result.Requests...)

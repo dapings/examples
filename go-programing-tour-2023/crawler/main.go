@@ -36,7 +36,9 @@ func main() {
 	// seeds slice cap
 	var seeds = make([]*collect.Task, 0, 1000)
 	seeds = append(seeds, &collect.Task{
-		Name:    doubangroup.FindSumRoomTaskName,
+		Property: collect.Property{
+			Name: doubangroup.JSFindSumRoomTaskName,
+		},
 		Fetcher: f,
 	})
 
