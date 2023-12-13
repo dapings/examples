@@ -34,6 +34,7 @@ func main() {
 	// douban timeout
 	// url := "https://book.douban.com/subject/1007305/"
 	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc, Logger: logger}
+	// seeds slice cap
 	var seeds = make([]*collect.Task, 0, 1000)
 	for i := 0; i < 25; i += 25 {
 		seeds = append(seeds, &collect.Task{

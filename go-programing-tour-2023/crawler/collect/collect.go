@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/extensions"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"go.uber.org/zap"
 	"golang.org/x/net/html/charset"
@@ -73,7 +74,7 @@ func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 		req.Header.Set("Cookie", request.Task.Cookie)
 	}
 
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36")
+	req.Header.Set("User-Agent", extensions.GenerateRandomUA())
 
 	resp, err := client.Do(req)
 	time.Sleep(request.Task.WaitTime)
