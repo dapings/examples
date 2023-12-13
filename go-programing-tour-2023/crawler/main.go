@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
@@ -36,16 +35,10 @@ func main() {
 	var f collect.Fetcher = collect.BrowserFetch{Timeout: 300 * time.Millisecond, Proxy: proxyFunc, Logger: logger}
 	// seeds slice cap
 	var seeds = make([]*collect.Task, 0, 1000)
-	for i := 0; i < 25; i += 25 {
-		seeds = append(seeds, &collect.Task{
-			Url:         fmt.Sprintf(doubangroup.DiscussionURL, i),
-			WaitTime:    1 * time.Second,
-			MaxDepth:    5,
-			Fetcher:     f,
-			Cookie:      doubangroup.Cookie,
-			RootRequest: &collect.Request{Priority: 1, Method: "GET", ParseFunc: doubangroup.ParseURL},
-		})
-	}
+	seeds = append(seeds, &collect.Task{
+		Name:    doubangroup.FindSumRoomTaskName,
+		Fetcher: f,
+	})
 
 	s := engine.NewEngine(
 		engine.WithWorkCount(5),

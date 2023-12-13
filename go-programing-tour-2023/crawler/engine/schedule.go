@@ -4,8 +4,18 @@ import (
 	"sync"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"go.uber.org/zap"
 )
+
+func init() {
+	Store.Add(doubangroup.DoubangroupTask)
+}
+
+var Store = &CrawlerStore{
+	list: make([]*collect.Task, 0),
+	hash: make(map[string]*collect.Task),
+}
 
 type Crawler struct {
 	out         chan collect.ParseResult
@@ -16,18 +26,20 @@ type Crawler struct {
 	options
 }
 
+type CrawlerStore struct {
+	list []*collect.Task
+	hash map[string]*collect.Task
+}
+
+func (c *CrawlerStore) Add(task *collect.Task) {
+	c.hash[task.Name] = task
+	c.list = append(c.list, task)
+}
+
 type Scheduler interface {
 	Schedule()
 	Push(...*collect.Request)
 	Pull() *collect.Request
-}
-
-type Schedule struct {
-	reqChan     chan *collect.Request
-	workerChan  chan *collect.Request
-	priReqQueue []*collect.Request
-	reqQueue    []*collect.Request
-	Logger      *zap.Logger
 }
 
 func NewEngine(opts ...Option) *Crawler {
@@ -43,22 +55,20 @@ func NewEngine(opts ...Option) *Crawler {
 	return e
 }
 
+type Schedule struct {
+	reqChan     chan *collect.Request
+	workerChan  chan *collect.Request
+	priReqQueue []*collect.Request
+	reqQueue    []*collect.Request
+	Logger      *zap.Logger
+}
+
 func NewSchedule() *Schedule {
 	s := &Schedule{}
 	s.reqChan = make(chan *collect.Request)
 	s.workerChan = make(chan *collect.Request)
 
 	return s
-}
-
-func (e *Crawler) Run() {
-	go e.Schedule()
-
-	for i := 0; i < e.WorkCount; i++ {
-		go e.CreateWork()
-	}
-
-	e.HandleResult()
 }
 
 func (s *Schedule) Push(reqQueue ...*collect.Request) {
@@ -104,12 +114,26 @@ func (s *Schedule) Schedule() {
 	}
 }
 
+func (e *Crawler) Run() {
+	go e.Schedule()
+
+	for i := 0; i < e.WorkCount; i++ {
+		go e.CreateWork()
+	}
+
+	e.HandleResult()
+}
+
 func (e *Crawler) Schedule() {
 	var reqQueue []*collect.Request
 	for _, seed := range e.Seeds {
-		seed.RootRequest.Task = seed
-		seed.RootRequest.Url = seed.Url
-		reqQueue = append(reqQueue, seed.RootRequest)
+		task := Store.hash[seed.Name]
+		task.Fetcher = seed.Fetcher
+		rootReqs := task.Rule.Root()
+		for _, req := range rootReqs {
+			req.Task = task
+		}
+		reqQueue = append(reqQueue, rootReqs...)
 	}
 	go e.scheduler.Schedule()
 	go e.scheduler.Push(reqQueue...)
@@ -117,33 +141,37 @@ func (e *Crawler) Schedule() {
 
 func (e *Crawler) CreateWork() {
 	for {
-		r := e.scheduler.Pull()
-		if err := r.Check(); err != nil {
+		req := e.scheduler.Pull()
+		if err := req.Check(); err != nil {
 			e.Logger.Error("check failed", zap.Error(err))
 			continue
 		}
-		if !r.Task.Reload && e.HasVisited(r) {
-			e.Logger.Debug("request has visited", zap.String("url:", r.Url))
+		if !req.Task.Reload && e.HasVisited(req) {
+			e.Logger.Debug("request has visited", zap.String("url:", req.Url))
 			continue
 		}
-		e.StoreVisited(r)
+		e.StoreVisited(req)
 
-		body, err := r.Task.Fetcher.Get(r)
+		body, err := req.Task.Fetcher.Get(req)
 		if err != nil {
 			e.Logger.Error("read content failed",
-				zap.Int("len", len(body)), zap.Error(err), zap.String("url", r.Url))
-			e.SetFailure(r)
+				zap.Int("len", len(body)), zap.Error(err), zap.String("url", req.Url))
+			e.SetFailure(req)
 			continue
 		}
 		if len(body) < 6000 {
 			e.Logger.Error("read content failed",
-				zap.Int("len", len(body)), zap.String("url", r.Url))
-			e.SetFailure(r)
+				zap.Int("len", len(body)), zap.String("url", req.Url))
+			e.SetFailure(req)
 			continue
 		}
 
 		e.Logger.Info("get content", zap.Int("len", len(body)))
-		result := r.ParseFunc(body, r)
+		rule := req.Task.Rule.Trunk[req.RuleName]
+		result := rule.ParseFunc(&collect.Context{
+			Body: body,
+			Req:  req,
+		})
 
 		if len(result.Requests) > 0 {
 			go e.scheduler.Push(result.Requests...)
