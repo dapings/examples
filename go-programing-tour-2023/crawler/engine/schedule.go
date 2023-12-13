@@ -11,6 +11,8 @@ type Crawler struct {
 	out         chan collect.ParseResult
 	Visited     map[string]bool
 	VisitedLock sync.Mutex
+	failures    map[string]*collect.Request // 失败请求id -> 失败请求
+	failureLock sync.Mutex
 	options
 }
 
@@ -36,6 +38,7 @@ func NewEngine(opts ...Option) *Crawler {
 	e := &Crawler{}
 	e.Visited = make(map[string]bool, 100)
 	e.out = make(chan collect.ParseResult)
+	e.failures = make(map[string]*collect.Request)
 	e.options = options
 	return e
 }
@@ -86,6 +89,7 @@ func (s *Schedule) Schedule() {
 			s.reqQueue = s.reqQueue[1:]
 			ch = s.workerChan
 		}
+
 		select {
 		case r := <-s.reqChan:
 			if r.Priority > 0 {
@@ -118,23 +122,26 @@ func (e *Crawler) CreateWork() {
 			e.Logger.Error("check failed", zap.Error(err))
 			continue
 		}
-		if e.HasVisited(r) {
+		if !r.Task.Reload && e.HasVisited(r) {
 			e.Logger.Debug("request has visited", zap.String("url:", r.Url))
 			continue
 		}
 		e.StoreVisited(r)
 
 		body, err := r.Task.Fetcher.Get(r)
+		if err != nil {
+			e.Logger.Error("read content failed",
+				zap.Int("len", len(body)), zap.Error(err), zap.String("url", r.Url))
+			e.SetFailure(r)
+			continue
+		}
 		if len(body) < 6000 {
 			e.Logger.Error("read content failed",
 				zap.Int("len", len(body)), zap.String("url", r.Url))
+			e.SetFailure(r)
 			continue
 		}
-		if err != nil {
-			e.Logger.Error("read content failed",
-				zap.Error(err), zap.String("url", r.Url))
-			continue
-		}
+
 		e.Logger.Info("get content", zap.Int("len", len(body)))
 		result := r.ParseFunc(body, r)
 
@@ -173,4 +180,22 @@ func (e *Crawler) StoreVisited(reqs ...*collect.Request) {
 		unique := r.Unique()
 		e.Visited[unique] = true
 	}
+}
+
+func (e *Crawler) SetFailure(req *collect.Request) {
+	if !req.Task.Reload {
+		e.VisitedLock.Lock()
+		unique := req.Unique()
+		delete(e.Visited, unique)
+		e.VisitedLock.Unlock()
+	}
+
+	e.failureLock.Unlock()
+	defer e.failureLock.Unlock()
+	if _, ok := e.failures[req.Unique()]; !ok {
+		// 首次失败，再重新执行一次
+		e.failures[req.Unique()] = req
+		e.scheduler.Push(req)
+	}
+	// TODO: 失败2次，加载到失败队列中
 }
