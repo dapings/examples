@@ -42,7 +42,7 @@ func main() {
 			MaxDepth:    5,
 			Fetcher:     f,
 			Cookie:      doubangroup.Cookie,
-			RootRequest: &collect.Request{Method: "GET", ParseFunc: doubangroup.ParseURL},
+			RootRequest: &collect.Request{Priority: 1, Method: "GET", ParseFunc: doubangroup.ParseURL},
 		})
 	}
 

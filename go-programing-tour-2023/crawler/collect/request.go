@@ -15,6 +15,7 @@ type (
 		Url       string
 		Method    string
 		Depth     int
+		Priority  int
 		ParseFunc func([]byte, *Request) ParseResult
 	}
 
