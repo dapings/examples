@@ -6,7 +6,7 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -37,7 +37,7 @@ func main() {
 	var seeds = make([]*collect.Task, 0, 1000)
 	seeds = append(seeds, &collect.Task{
 		Property: collect.Property{
-			Name: doubangroup.JSFindSumRoomTaskName,
+			Name: doubangroupjs.JSFindSumRoomTaskName,
 		},
 		Fetcher: f,
 	})

@@ -5,16 +5,17 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
 	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
 )
 
 func init() {
 	Store.Add(doubangroup.DoubangroupTask)
-	Store.AddJSTask(doubangroup.DoubangroupJSTask)
+	Store.AddJSTask(doubangroupjs.DoubangroupJSTask)
 }
 
-// Store 全局蜘蛛实例
+// Store 全局爬虫(蜘蛛)任务实例
 var Store = &CrawlerStore{
 	list: make([]*collect.Task, 0),
 	hash: make(map[string]*collect.Task),
@@ -137,10 +138,6 @@ func (s *Schedule) Push(reqQueue ...*collect.Request) {
 }
 
 func (s *Schedule) Pull() *collect.Request {
-	return <-s.workerChan
-}
-
-func (s *Schedule) Output() *collect.Request {
 	return <-s.workerChan
 }
 
