@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubanbook"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
@@ -20,7 +21,12 @@ func init() {
 // Store 全局爬虫(蜘蛛)任务实例
 var Store = &CrawlerStore{
 	list: make([]*collect.Task, 0),
-	hash: make(map[string]*collect.Task),
+	Hash: make(map[string]*collect.Task),
+}
+
+// GetFields 获取任务规则的配置项。
+func GetFields(taskName, ruleName string) []string {
+	return Store.Hash[taskName].Rule.Trunk[ruleName].ItemFields
 }
 
 type Crawler struct {
@@ -34,11 +40,11 @@ type Crawler struct {
 
 type CrawlerStore struct {
 	list []*collect.Task
-	hash map[string]*collect.Task
+	Hash map[string]*collect.Task
 }
 
 func (c *CrawlerStore) Add(task *collect.Task) {
-	c.hash[task.Name] = task
+	c.Hash[task.Name] = task
 	c.list = append(c.list, task)
 }
 
@@ -94,7 +100,7 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
 		task.Rule.Trunk[r.Name] = &collect.Rule{ParseFunc: parseFunc}
 	}
 
-	c.hash[task.Name] = task
+	c.Hash[task.Name] = task
 	c.list = append(c.list, task)
 }
 
@@ -185,8 +191,10 @@ func (e *Crawler) Run() {
 func (e *Crawler) Schedule() {
 	var reqQueue []*collect.Request
 	for _, seed := range e.Seeds {
-		task := Store.hash[seed.Name]
+		task := Store.Hash[seed.Name]
 		task.Fetcher = seed.Fetcher
+		task.Storage = seed.Storage
+		task.Logger = e.Logger
 		rootReqs, err := task.Rule.Root()
 		if err != nil {
 			e.Logger.Error("get root failed", zap.Error(err))
@@ -252,7 +260,16 @@ func (e *Crawler) HandleResult() {
 		select {
 		case result := <-e.out:
 			for _, item := range result.Items {
-				// TODO: store
+				switch d := item.(type) {
+				case *collector.DataCell:
+					task := Store.Hash[d.GetTaskName()]
+					err := task.Storage.Save(d)
+					if err != nil {
+						// TODO: when store error, skip or other handle method
+						e.Logger.Error("task.Storage.Save failed", zap.Error(err))
+						continue
+					}
+				}
 				e.Logger.Sugar().Info("get result", item)
 			}
 		}

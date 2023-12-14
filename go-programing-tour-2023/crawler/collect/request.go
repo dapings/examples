@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
+	"go.uber.org/zap"
 )
 
 type (
@@ -42,8 +43,9 @@ type (
 		Visited     map[string]bool
 		VisitedLock sync.Mutex
 		Fetcher     Fetcher
-		Store       collector.Store
+		Storage     collector.Storage
 		Rule        RuleTree
+		Logger      *zap.Logger
 	}
 
 	Context struct {
@@ -92,9 +94,10 @@ func (c *Context) OutputJS(reg string) ParseResult {
 	return ParseResult{Items: []any{c.Req.Url}}
 }
 
-func (c *Context) Output(data any) *collector.OutputData {
-	res := &collector.OutputData{}
-	res.Data = make(map[string]interface{})
+func (c *Context) Output(data any) *collector.DataCell {
+	res := &collector.DataCell{}
+	res.Data = make(map[string]any)
+	res.Data["Task"] = c.Req.Task.Name
 	res.Data["Rule"] = c.Req.RuleName
 	res.Data["Data"] = data
 	res.Data["Url"] = c.Req.Url
