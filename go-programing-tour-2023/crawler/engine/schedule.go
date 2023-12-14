@@ -4,6 +4,7 @@ import (
 	"sync"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubanbook"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
 	"github.com/robertkrimen/otto"
@@ -12,6 +13,7 @@ import (
 
 func init() {
 	Store.Add(doubangroup.DoubangroupTask)
+	Store.Add(doubanbook.DoubanBookTask)
 	Store.AddJSTask(doubangroupjs.DoubangroupJSTask)
 }
 
