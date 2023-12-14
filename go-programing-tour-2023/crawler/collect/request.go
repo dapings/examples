@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sync"
 	"time"
+
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
 )
 
 type (
@@ -18,6 +20,7 @@ type (
 		Depth    int64
 		Priority int64
 		RuleName string
+		TmpData  *Temp
 	}
 
 	ParseResult struct {
@@ -39,6 +42,7 @@ type (
 		Visited     map[string]bool
 		VisitedLock sync.Mutex
 		Fetcher     Fetcher
+		Store       collector.Store
 		Rule        RuleTree
 	}
 
@@ -86,4 +90,18 @@ func (c *Context) OutputJS(reg string) ParseResult {
 		return ParseResult{Items: make([]any, 0)}
 	}
 	return ParseResult{Items: []any{c.Req.Url}}
+}
+
+func (c *Context) Output(data any) *collector.OutputData {
+	res := &collector.OutputData{}
+	res.Data = make(map[string]interface{})
+	res.Data["Rule"] = c.Req.RuleName
+	res.Data["Data"] = data
+	res.Data["Url"] = c.Req.Url
+	res.Data["Time"] = time.Now().Format(time.DateTime)
+	return res
+}
+
+func (c *Context) GetRule(ruleName string) *Rule {
+	return c.Req.Task.Rule.Trunk[ruleName]
 }
