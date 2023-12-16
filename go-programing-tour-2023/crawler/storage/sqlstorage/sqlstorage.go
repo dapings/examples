@@ -3,26 +3,26 @@ package sqlstorage
 import (
 	"encoding/json"
 
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/sqldb"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/storage"
 	"go.uber.org/zap"
 )
 
-type SQLStore struct {
-	dataCells   []*collector.DataCell // 分批输出结果缓存
-	columnNames []sqldb.Field         // 标题字段
+type SQLStorage struct {
+	dataCells   []*storage.DataCell // 分批输出结果缓存
+	columnNames []sqldb.Field       // 标题字段
 	db          sqldb.DBer
 	Table       map[string]struct{}
 	options
 }
 
-func New(opts ...Option) (*SQLStore, error) {
+func New(opts ...Option) (*SQLStorage, error) {
 	options := defaultOptions
 	for _, opt := range opts {
 		opt(&options)
 	}
-	s := &SQLStore{}
+	s := &SQLStorage{}
 	s.options = options
 	s.Table = make(map[string]struct{})
 	var err error
@@ -34,7 +34,7 @@ func New(opts ...Option) (*SQLStore, error) {
 	return s, nil
 }
 
-func (s *SQLStore) Save(dataCells ...*collector.DataCell) error {
+func (s *SQLStorage) Save(dataCells ...*storage.DataCell) error {
 	for _, cell := range dataCells {
 		name := cell.GetTableName()
 		if _, ok := s.Table[name]; !ok {
@@ -63,7 +63,7 @@ func (s *SQLStore) Save(dataCells ...*collector.DataCell) error {
 }
 
 // 解析出标题字段
-func getFields(cell *collector.DataCell) []sqldb.Field {
+func getFields(cell *storage.DataCell) []sqldb.Field {
 	taskName := cell.Data["Task"].(string)
 	ruleName := cell.Data["Rule"].(string)
 	fields := engine.GetFields(taskName, ruleName)
@@ -79,11 +79,13 @@ func getFields(cell *collector.DataCell) []sqldb.Field {
 	return columnNames
 }
 
-func (s *SQLStore) Flush() error {
+func (s *SQLStorage) Flush() error {
 	if len(s.dataCells) == 0 {
 		return nil
 	}
-
+	defer func() {
+		s.dataCells = nil
+	}()
 	args := make([]any, 0)
 	for _, dataCell := range s.dataCells {
 		taskName := dataCell.Data["Task"].(string)

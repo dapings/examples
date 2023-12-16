@@ -37,10 +37,6 @@ type TableData struct {
 	AutoKey     bool
 }
 
-func newSQLDB() *SQLDB {
-	return &SQLDB{}
-}
-
 func New(opts ...Option) (*SQLDB, error) {
 	options := defaultOptions
 	for _, opt := range opts {

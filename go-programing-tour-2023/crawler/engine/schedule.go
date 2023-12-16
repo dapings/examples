@@ -2,9 +2,8 @@ package engine
 
 import (
 	"sync"
-
+	
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubanbook"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
@@ -261,7 +260,7 @@ func (e *Crawler) HandleResult() {
 		case result := <-e.out:
 			for _, item := range result.Items {
 				switch d := item.(type) {
-				case *collector.DataCell:
+				case *storage.DataCell:
 					task := Store.Hash[d.GetTaskName()]
 					err := task.Storage.Save(d)
 					if err != nil {
