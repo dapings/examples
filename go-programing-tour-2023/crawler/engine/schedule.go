@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"runtime/debug"
 	"sync"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
@@ -211,6 +212,11 @@ func (e *Crawler) Schedule() {
 }
 
 func (e *Crawler) CreateWork() {
+	defer func() {
+		if err := recover(); err != nil {
+			e.Logger.Error("worker panic", zap.Any("err", err), zap.String("stack", string(debug.Stack())))
+		}
+	}()
 	for {
 		req := e.scheduler.Pull()
 		if err := req.Check(); err != nil {
