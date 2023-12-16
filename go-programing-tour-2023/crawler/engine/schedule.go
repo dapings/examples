@@ -2,11 +2,12 @@ package engine
 
 import (
 	"sync"
-	
+
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubanbook"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroup"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/parse/doubangroupjs"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/storage"
 	"github.com/robertkrimen/otto"
 	"go.uber.org/zap"
 )
@@ -193,6 +194,7 @@ func (e *Crawler) Schedule() {
 		task := Store.Hash[seed.Name]
 		task.Fetcher = seed.Fetcher
 		task.Storage = seed.Storage
+		task.Limit = seed.Limit
 		task.Logger = e.Logger
 		rootReqs, err := task.Rule.Root()
 		if err != nil {
@@ -221,7 +223,7 @@ func (e *Crawler) CreateWork() {
 		}
 		e.StoreVisited(req)
 
-		body, err := req.Task.Fetcher.Get(req)
+		body, err := req.Fetch()
 		if err != nil {
 			e.Logger.Error("read content failed",
 				zap.Int("len", len(body)), zap.Error(err), zap.String("url", req.Url))

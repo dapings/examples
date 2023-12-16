@@ -1,13 +1,16 @@
 package collect
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
+	"math/rand"
 	"regexp"
 	"sync"
 	"time"
-	
+
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/limiter"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/storage"
 	"go.uber.org/zap"
 )
@@ -46,6 +49,7 @@ type (
 		Storage     storage.Storage
 		Rule        RuleTree
 		Logger      *zap.Logger
+		Limit       limiter.RateLimiter
 	}
 
 	Context struct {
@@ -65,6 +69,16 @@ func (r *Request) Check() error {
 func (r *Request) Unique() string {
 	block := md5.Sum([]byte(r.Url + r.Method))
 	return hex.EncodeToString(block[:])
+}
+
+func (r *Request) Fetch() ([]byte, error) {
+	if err := r.Task.Limit.Wait(context.Background()); err != nil {
+		return nil, err
+	}
+	// 随机休眠，模拟人类行为
+	sleepTime := rand.Int63n(r.Task.WaitTime * 1000)
+	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+	return r.Task.Fetcher.Get(r)
 }
 
 func (c *Context) ParseJSReg(name, reg string) ParseResult {
