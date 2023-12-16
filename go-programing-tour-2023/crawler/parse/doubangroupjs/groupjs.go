@@ -1,8 +1,6 @@
 package doubangroupjs
 
 import (
-	"time"
-
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 )
 
@@ -18,7 +16,7 @@ var DoubangroupJSTask = &collect.TaskModel{
 	Property: collect.Property{
 		Name:     JSFindSumRoomTaskName,
 		Cookie:   cookie,
-		WaitTime: 1 * time.Second,
+		WaitTime: 2,
 		MaxDepth: 5,
 	},
 	Root: `

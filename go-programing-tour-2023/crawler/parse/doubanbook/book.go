@@ -3,9 +3,9 @@ package doubanbook
 import (
 	"regexp"
 	"strconv"
-	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"go.uber.org/zap"
 )
 
 var (
@@ -21,7 +21,7 @@ const (
 
 var (
 	autoReg   = regexp.MustCompile(`<span class="pl"> 作者</span>:[\d\D]*?<a.*?>([^<]+)</a>`)
-	publicReg = regexp.MustCompile(`<span class="pl">出版社:</span>([^<]+)<br/>`)
+	publicReg = regexp.MustCompile(`<span class="pl">出版社:</span>[\d\D]*?<a.*?>([^<]+)</a>`)
 	pageReg   = regexp.MustCompile(`<span class="pl">页数:</span> ([^<]+)<br/>`)
 	priceReg  = regexp.MustCompile(`<span class="pl">定价:</span>([^<]+)<br/>`)
 	scoreReg  = regexp.MustCompile(`<strong class="ll rating_num " property="v:average">([^<]+)</strong>`)
@@ -32,7 +32,7 @@ var DoubanBookTask = &collect.Task{
 	Property: collect.Property{
 		Name:     BookListTaskName,
 		Cookie:   cookie,
-		WaitTime: 1 * time.Second,
+		WaitTime: 2,
 		MaxDepth: 5,
 	},
 	Rule: collect.RuleTree{
@@ -81,7 +81,8 @@ func ParseTag(ctx *collect.Context) (collect.ParseResult, error) {
 			})
 	}
 	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
-	result.Requests = result.Requests[:1]
+	zap.S().Debugln("parse book tag, request count:", len(result.Requests))
+	// result.Requests = result.Requests[:1]
 	return result, nil
 }
 
@@ -91,6 +92,7 @@ func ParseBookList(ctx *collect.Context) (collect.ParseResult, error) {
 	result := collect.ParseResult{}
 	for _, m := range matches {
 		req := &collect.Request{
+			Priority: 100,
 			Method:   "GET",
 			Task:     ctx.Req.Task,
 			Url:      string(m[1]),
@@ -105,7 +107,8 @@ func ParseBookList(ctx *collect.Context) (collect.ParseResult, error) {
 		result.Requests = append(result.Requests, req)
 	}
 	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
-	result.Requests = result.Requests[:3]
+	zap.S().Debugln("parse book list, request count:", len(result.Requests))
+	// result.Requests = result.Requests[:3]
 	return result, nil
 }
 
@@ -121,6 +124,7 @@ func ParseBookDetail(ctx *collect.Context) (collect.ParseResult, error) {
 		"价格":  ExtraString(ctx.Body, priceReg),
 		"简介":  ExtraString(ctx.Body, intoReg),
 	}
+	zap.S().Debugln("parse book detail", book)
 	return collect.ParseResult{Items: []any{ctx.Output(book)}}, nil
 }
 

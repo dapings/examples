@@ -76,11 +76,10 @@ func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 
 	req.Header.Set("User-Agent", extensions.GenerateRandomUA())
 
-	resp, err := client.Do(req)
-	time.Sleep(request.Task.WaitTime)
-	if err != nil {
-		b.Logger.Error("fetch url error: ", zap.String("fetch url", request.Url), zap.Error(err))
-		return nil, err
+	resp, doErr := client.Do(req)
+	if doErr != nil {
+		b.Logger.Error("fetch url error: ", zap.String("fetch url", request.Url), zap.Error(doErr))
+		return nil, doErr
 	}
 
 	bodyReader := bufio.NewReader(resp.Body)

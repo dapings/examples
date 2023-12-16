@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"sync"
 	"time"
-
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collector"
+	
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/storage"
 	"go.uber.org/zap"
 )
 
@@ -30,12 +30,12 @@ type (
 	}
 
 	Property struct {
-		Name     string        `json:"name"` // 用户界面显示的名称，且需保证唯一性
-		Url      string        `json:"url"`
-		Cookie   string        `json:"cookie"`
-		WaitTime time.Duration `json:"wait_time"`
-		Reload   bool          `json:"reload"` // 网站是否可以重复爬取
-		MaxDepth int64         `json:"max_depth"`
+		Name     string `json:"name"` // 用户界面显示的名称，且需保证唯一性
+		Url      string `json:"url"`
+		Cookie   string `json:"cookie"`
+		WaitTime int64  `json:"wait_time"`
+		Reload   bool   `json:"reload"` // 网站是否可以重复爬取
+		MaxDepth int64  `json:"max_depth"`
 	}
 
 	Task struct {
@@ -43,7 +43,7 @@ type (
 		Visited     map[string]bool
 		VisitedLock sync.Mutex
 		Fetcher     Fetcher
-		Storage     collector.Storage
+		Storage     storage.Storage
 		Rule        RuleTree
 		Logger      *zap.Logger
 	}
@@ -94,8 +94,8 @@ func (c *Context) OutputJS(reg string) ParseResult {
 	return ParseResult{Items: []any{c.Req.Url}}
 }
 
-func (c *Context) Output(data any) *collector.DataCell {
-	res := &collector.DataCell{}
+func (c *Context) Output(data any) *storage.DataCell {
+	res := &storage.DataCell{}
 	res.Data = make(map[string]any)
 	res.Data["Task"] = c.Req.Task.Name
 	res.Data["Rule"] = c.Req.RuleName

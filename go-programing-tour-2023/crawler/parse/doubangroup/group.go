@@ -3,7 +3,6 @@ package doubangroup
 import (
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
 )
@@ -23,7 +22,7 @@ var DoubangroupTask = &collect.Task{
 	Property: collect.Property{
 		Name:     FindSumRoomTaskName,
 		Cookie:   cookie,
-		WaitTime: 1 * time.Second,
+		WaitTime: 2,
 		MaxDepth: 5,
 	},
 	Rule: collect.RuleTree{
