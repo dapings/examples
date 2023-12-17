@@ -92,6 +92,10 @@
    - gRPC 和 Protobuf 简介
    
      Protobuf 是强规范的，其本身就包含字段名和字段类型等信息。
+     gRPC基于HTTP/2标准设计，拥有双向流、流控、头部压缩、单TCP连接上的多路复用请求等特性，具有以下优势：
+     - 使用HTTP/2来传输序列化后的二进制信息，字节数组比JSON更小，序列化与反序列化速度更快，传输速度更快。
+     - 与语言、框架无关的序列化与反序列化能力。
+     - 支持双向的流式传输
 
    - Protobuf 的使用
    
@@ -200,6 +204,7 @@
      - 同端口同方法双流量支持：应用代理 grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
 
        开源社区的 grpc-gateway 是 protoc 的一个插件，能够读取 protobuf 的服务定义，生成一个反向代理服务器，将 Restful JSON API 转换为 gRPC。它主要是根据 protobuf 的服务定义中的 google.api.http 来生成的。
+       grpc-gateway的功能就是生成一个HTTP的代理服务，将HTTP请求转换为gRPC协议，并转发到gRPC服务器中。
        简单来说，grpc-gateway 能够将 Restful 转换为 gRPC 请求，实现用同一个RPC方法提供对gRPC协议和HTTP/1.1的双流量支持。
        ```shell
        # https://grpc-ecosystem.github.io/grpc-gateway/
@@ -467,3 +472,26 @@
 
 4. chatroom IM聊天室
 5. cache-example 进程内缓存
+
+## [go-micro](https://github.com/asim/go-micro) a Go microservices framework
+
+see https://github.com/go-micro for tooling.
+- [go-micro 样例](https://github.com/go-micro/examples)
+
+go-micro 拥有更丰富的生态和功能，更方便的工具和API。如服务注册可以方便地切换到etcd,zk,gossip,nats等注册中心，方便实现服务注册功能。Server支持gRPC,HTTP等协议。
+使用`protoc-gen-micro`插件来生成micro适用的协议文件，但插件版本需和go-micro版本相同。
+```text
+go install github.com/asim/go-micro/cmd/protoc-gen-micro/v4@latest
+
+# 手动下载依赖文件并放入GOTPATH下
+git clone git@github.com:googleapis/googleapis.git
+mv googleapis/google $(go env GOPATH)/src/github.com/googleapis/google
+
+# go-micro,grpc-gateway插件，可能存在命名冲突，指定grpc-gateway的选项register_func_suffix，让生成的函数名包含后缀，解决命令冲突。
+protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+--grpc-gateway_out=logtostderr=true,register_func_suffix=Gw:./protos/ \
+--micro_out=./protos/ --go_out=./protos/ --go-grpc_out=./protos/ \
+./protos/*.proto
+```
+
+为了生成gRPC服务器，需要导入go-micro的gRP插件库(github.com/go-micro/plugins/v4/server/grpc)，生成一个gRPC Server注入micro.NewService 中。
