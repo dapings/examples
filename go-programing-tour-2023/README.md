@@ -486,6 +486,8 @@ go install github.com/asim/go-micro/cmd/protoc-gen-micro/v4@latest
 # 手动下载依赖文件并放入GOTPATH下
 git clone git@github.com:googleapis/googleapis.git
 mv googleapis/google $(go env GOPATH)/src/github.com/googleapis/google
+# 或者使用 grpc-ecosystem/grpc-gateway v1.14.5
+go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway@v1.14.5
 
 # go-micro,grpc-gateway插件，可能存在命名冲突，指定grpc-gateway的选项register_func_suffix，让生成的函数名包含后缀，解决命令冲突。
 protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
