@@ -4,6 +4,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// 用 option 的模式注入参数。
+
 type options struct {
 	logger *zap.Logger
 	sqlUrl string
