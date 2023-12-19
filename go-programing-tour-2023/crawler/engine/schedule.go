@@ -14,8 +14,8 @@ import (
 )
 
 func init() {
-	Store.Add(doubangroup.DoubangroupTask)
 	Store.Add(doubanbook.DoubanBookTask)
+	Store.Add(doubangroup.DoubangroupTask)
 	Store.AddJSTask(doubangroupjs.DoubangroupJSTask)
 }
 
