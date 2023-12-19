@@ -29,7 +29,7 @@ func main() {
 		micro.Client(grpccli.NewClient()),
 		// go-micro 注入etcd中的Key为/micro/registry/go.micro.server.worker/go.micro.server.worker-1
 		micro.Registry(reg), // 注入register模块，用于指定注册中心，并定时发送自己的健康状况用于保活
-		micro.WrapHandler(log.LogWrapper(logger)),
+		micro.WrapHandler(log.MicroServerWrapper(logger)),
 	)
 	service.Init()
 

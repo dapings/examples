@@ -17,9 +17,8 @@ import (
 
 type (
 	Request struct {
-		unique   string
 		Task     *Task
-		Url      string
+		URL      string
 		Method   string
 		Depth    int64
 		Priority int64
@@ -34,7 +33,7 @@ type (
 
 	Property struct {
 		Name     string `json:"name"` // 用户界面显示的名称，且需保证唯一性
-		Url      string `json:"url"`
+		URL      string `json:"url"`
 		Cookie   string `json:"cookie"`
 		WaitTime int64  `json:"wait_time"`
 		Reload   bool   `json:"reload"` // 网站是否可以重复爬取
@@ -67,7 +66,8 @@ func (r *Request) Check() error {
 }
 
 func (r *Request) Unique() string {
-	block := md5.Sum([]byte(r.Url + r.Method))
+	block := md5.Sum([]byte(r.URL + r.Method))
+
 	return hex.EncodeToString(block[:])
 }
 
@@ -78,6 +78,7 @@ func (r *Request) Fetch() ([]byte, error) {
 	// 随机休眠，模拟人类行为
 	sleepTime := rand.Int63n(r.Task.WaitTime * 1000)
 	time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+
 	return r.Task.Fetcher.Get(r)
 }
 
@@ -85,27 +86,29 @@ func (c *Context) ParseJSReg(name, reg string) ParseResult {
 	re := regexp.MustCompile(reg)
 	matches := re.FindAllSubmatch(c.Body, -1)
 	result := ParseResult{}
+
 	for _, m := range matches {
 		u := string(m[1])
 		result.Requests = append(result.Requests, &Request{
 			Task:     c.Req.Task,
-			Url:      u,
+			URL:      u,
 			Method:   "GET",
 			Depth:    c.Req.Depth + 1,
 			Priority: 0,
 			RuleName: name,
 		})
 	}
+
 	return result
 }
 
 func (c *Context) OutputJS(reg string) ParseResult {
 	re := regexp.MustCompile(reg)
-	ok := re.Match(c.Body)
-	if !ok {
+	if ok := re.Match(c.Body); !ok {
 		return ParseResult{Items: make([]any, 0)}
 	}
-	return ParseResult{Items: []any{c.Req.Url}}
+
+	return ParseResult{Items: []any{c.Req.URL}}
 }
 
 func (c *Context) Output(data any) *storage.DataCell {
@@ -114,8 +117,9 @@ func (c *Context) Output(data any) *storage.DataCell {
 	res.Data["Task"] = c.Req.Task.Name
 	res.Data["Rule"] = c.Req.RuleName
 	res.Data["Data"] = data
-	res.Data["Url"] = c.Req.Url
+	res.Data["URL"] = c.Req.URL
 	res.Data["Time"] = time.Now().Format(time.DateTime)
+
 	return res
 }
 

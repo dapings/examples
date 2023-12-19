@@ -6,7 +6,7 @@ import (
 
 type options struct {
 	logger     *zap.Logger
-	sqlUrl     string
+	sqlURL     string
 	BatchCount int
 }
 
@@ -20,9 +20,9 @@ func WithLogger(logger *zap.Logger) Option {
 	}
 }
 
-func WithSQLUrl(sqlUrl string) Option {
+func WithSQLURL(sqlURL string) Option {
 	return func(opts *options) {
-		opts.sqlUrl = sqlUrl
+		opts.sqlURL = sqlURL
 	}
 }
 

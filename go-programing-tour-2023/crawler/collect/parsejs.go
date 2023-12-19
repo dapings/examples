@@ -17,20 +17,24 @@ type (
 
 func generateReq(jsReq map[string]any) *Request {
 	req := &Request{}
-	u, ok := jsReq["Url"].(string)
+	u, ok := jsReq["URL"].(string)
+
 	if !ok {
 		return nil
 	}
-	req.Url = u
+
+	req.URL = u
 	req.RuleName, _ = jsReq["RuleName"].(string)
 	req.Method, _ = jsReq["Method"].(string)
 	req.Priority, _ = jsReq["Priority"].(int64)
+
 	return req
 }
 
 func AddJsReq(jsReq map[string]any) []*Request {
 	reqs := make([]*Request, 0)
 	reqs = append(reqs, generateReq(jsReq))
+
 	return reqs
 }
 
@@ -39,5 +43,6 @@ func AddJsReqs(jsReqs []map[string]any) []*Request {
 	for _, jsReq := range jsReqs {
 		reqs = append(reqs, generateReq(jsReq))
 	}
+
 	return reqs
 }

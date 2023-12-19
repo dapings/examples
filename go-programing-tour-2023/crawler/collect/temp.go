@@ -13,6 +13,8 @@ func (t *Temp) Set(key string, val any) error {
 	if t.data == nil {
 		t.data = make(map[string]any)
 	}
+
 	t.data[key] = val
+
 	return nil
 }

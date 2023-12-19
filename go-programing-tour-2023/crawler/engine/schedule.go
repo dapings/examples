@@ -56,18 +56,22 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
 	task.Rule.Root = func() ([]*collect.Request, error) {
 		// allocate a new JavaScript runtime
 		vm := otto.New()
-		err := vm.Set("AddJsReq", collect.AddJsReq)
-		if err != nil {
+		if err := vm.Set("AddJsReq", collect.AddJsReq); err != nil {
 			return nil, err
 		}
+
 		v, evalErr := vm.Eval(m.Root)
+
 		if evalErr != nil {
 			return nil, evalErr
 		}
+
 		e, exportErr := v.Export()
+
 		if exportErr != nil {
 			return nil, exportErr
 		}
+
 		return e.([]*collect.Request), nil
 	}
 
@@ -76,21 +80,26 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
 			return func(ctx *collect.Context) (collect.ParseResult, error) {
 				// allocate a new JavaScript runtime
 				vm := otto.New()
-				err := vm.Set("ctx", ctx)
-				if err != nil {
+				if err := vm.Set("ctx", ctx); err != nil {
 					return collect.ParseResult{}, err
 				}
+
 				v, evalErr := vm.Eval(parse)
+
 				if evalErr != nil {
 					return collect.ParseResult{}, evalErr
 				}
+
 				e, exportErr := v.Export()
+
 				if exportErr != nil {
 					return collect.ParseResult{}, exportErr
 				}
+
 				if e == nil {
 					return collect.ParseResult{}, exportErr
 				}
+
 				return e.(collect.ParseResult), exportErr
 			}
 		}(r.ParseFunc)
@@ -98,6 +107,7 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
 		if task.Rule.Trunk == nil {
 			task.Rule.Trunk = make(map[string]*collect.Rule, 0)
 		}
+
 		task.Rule.Trunk[r.Name] = &collect.Rule{ParseFunc: parseFunc}
 	}
 
@@ -107,7 +117,7 @@ func (c *CrawlerStore) AddJSTask(m *collect.TaskModel) {
 
 type Scheduler interface {
 	Schedule()
-	Push(...*collect.Request)
+	Push(reqQueue ...*collect.Request)
 	Pull() *collect.Request
 }
 
@@ -116,11 +126,14 @@ func NewEngine(opts ...Option) *Crawler {
 	for _, opt := range opts {
 		opt(&options)
 	}
+
 	e := &Crawler{}
+
 	e.Visited = make(map[string]bool, 100)
 	e.out = make(chan collect.ParseResult)
 	e.failures = make(map[string]*collect.Request)
 	e.options = options
+
 	return e
 }
 
@@ -152,13 +165,16 @@ func (s *Schedule) Pull() *collect.Request {
 
 func (s *Schedule) Schedule() {
 	var req *collect.Request
+
 	var ch chan *collect.Request
+
 	for {
 		if req == nil && len(s.priReqQueue) > 0 {
 			req = s.priReqQueue[0]
 			s.priReqQueue = s.priReqQueue[1:]
 			ch = s.workerChan
 		}
+
 		if req == nil && len(s.reqQueue) > 0 {
 			req = s.reqQueue[0]
 			s.reqQueue = s.reqQueue[1:]
@@ -191,6 +207,7 @@ func (e *Crawler) Run() {
 
 func (e *Crawler) Schedule() {
 	var reqQueue []*collect.Request
+
 	for _, seed := range e.Seeds {
 		task := Store.Hash[seed.Name]
 		task.Fetcher = seed.Fetcher
@@ -198,15 +215,20 @@ func (e *Crawler) Schedule() {
 		task.Limit = seed.Limit
 		task.Logger = e.Logger
 		rootReqs, err := task.Rule.Root()
+
 		if err != nil {
 			e.Logger.Error("get root failed", zap.Error(err))
+
 			continue
 		}
+
 		for _, req := range rootReqs {
 			req.Task = task
 		}
+
 		reqQueue = append(reqQueue, rootReqs...)
 	}
+
 	go e.scheduler.Schedule()
 	go e.scheduler.Push(reqQueue...)
 }
@@ -217,40 +239,54 @@ func (e *Crawler) CreateWork() {
 			e.Logger.Error("worker panic", zap.Any("err", err), zap.String("stack", string(debug.Stack())))
 		}
 	}()
+
 	for {
 		req := e.scheduler.Pull()
 		if err := req.Check(); err != nil {
 			e.Logger.Error("check failed", zap.Error(err))
+
 			continue
 		}
+
 		if !req.Task.Reload && e.HasVisited(req) {
-			e.Logger.Debug("request has visited", zap.String("url:", req.Url))
+			e.Logger.Debug("request has visited", zap.String("url:", req.URL))
+
 			continue
 		}
+
 		e.StoreVisited(req)
 
 		body, err := req.Fetch()
 		if err != nil {
 			e.Logger.Error("read content failed",
-				zap.Int("len", len(body)), zap.Error(err), zap.String("url", req.Url))
+				zap.Int("len", len(body)), zap.Error(err), zap.String("url", req.URL))
+
 			e.SetFailure(req)
+
 			continue
 		}
+
 		if len(body) < 6000 {
 			e.Logger.Error("read content failed",
-				zap.Int("len", len(body)), zap.String("url", req.Url))
+				zap.Int("len", len(body)), zap.String("url", req.URL))
+
 			e.SetFailure(req)
+
 			continue
 		}
 
 		e.Logger.Info("get content", zap.Int("len", len(body)))
+
 		rule := req.Task.Rule.Trunk[req.RuleName]
-		result, err := rule.ParseFunc(&collect.Context{
+
+		result, parsedErr := rule.ParseFunc(&collect.Context{
 			Body: body,
 			Req:  req,
 		})
-		if err != nil {
-			e.Logger.Error("rule.ParseFunc failed", zap.Error(err))
+
+		if parsedErr != nil {
+			e.Logger.Error("rule.ParseFunc failed", zap.Error(parsedErr))
+
 			continue
 		}
 
@@ -263,22 +299,20 @@ func (e *Crawler) CreateWork() {
 }
 
 func (e *Crawler) HandleResult() {
-	for {
-		select {
-		case result := <-e.out:
-			for _, item := range result.Items {
-				switch d := item.(type) {
-				case *storage.DataCell:
-					task := Store.Hash[d.GetTaskName()]
-					err := task.Storage.Save(d)
-					if err != nil {
-						// TODO: when store error, skip or other handle method
-						e.Logger.Error("task.Storage.Save failed", zap.Error(err))
-						continue
-					}
+	for result := range e.out {
+		for _, item := range result.Items {
+			switch d := item.(type) {
+			case *storage.DataCell:
+				task := Store.Hash[d.GetTaskName()]
+
+				if err := task.Storage.Save(d); err != nil {
+					// TODO: when store error, skip or other handle method
+					e.Logger.Error("task.Storage.Save failed", zap.Error(err))
+
+					continue
 				}
-				e.Logger.Sugar().Info("get result", item)
 			}
+			e.Logger.Sugar().Info("get result", item)
 		}
 	}
 }
@@ -286,7 +320,9 @@ func (e *Crawler) HandleResult() {
 func (e *Crawler) HasVisited(r *collect.Request) bool {
 	e.VisitedLock.Lock()
 	defer e.VisitedLock.Unlock()
+
 	unique := r.Unique()
+
 	return e.Visited[unique]
 }
 
@@ -310,6 +346,7 @@ func (e *Crawler) SetFailure(req *collect.Request) {
 
 	e.failureLock.Unlock()
 	defer e.failureLock.Unlock()
+
 	if _, ok := e.failures[req.Unique()]; !ok {
 		// 首次失败，再重新执行一次
 		e.failures[req.Unique()] = req

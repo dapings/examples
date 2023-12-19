@@ -30,12 +30,13 @@ var DoubangroupTask = &collect.Task{
 			var roots []*collect.Request
 			for i := 0; i < 25; i += 25 {
 				roots = append(roots, &collect.Request{
-					Url:      fmt.Sprintf(discussionURL, i),
+					URL:      fmt.Sprintf(discussionURL, i),
 					Method:   "GET",
 					Priority: 1,
 					RuleName: "解析网站URL",
 				})
 			}
+
 			return roots, nil
 		},
 		Trunk: map[string]*collect.Rule{
@@ -47,27 +48,29 @@ var DoubangroupTask = &collect.Task{
 
 func GetSunRoom(ctx *collect.Context) (collect.ParseResult, error) {
 	re := regexp.MustCompile(ContentRe)
-	ok := re.Match(ctx.Body)
-	if !ok {
+
+	if ok := re.Match(ctx.Body); !ok {
 		return collect.ParseResult{Items: make([]any, 0)}, nil
 	}
 
-	return collect.ParseResult{Items: []any{ctx.Req.Url}}, nil
+	return collect.ParseResult{Items: []any{ctx.Req.URL}}, nil
 }
 
 func ParseURL(ctx *collect.Context) (collect.ParseResult, error) {
 	re := regexp.MustCompile(urlListRe)
 	matches := re.FindAllSubmatch(ctx.Body, -1)
 	result := collect.ParseResult{}
+
 	for _, m := range matches {
 		u := string(m[1])
 		result.Requests = append(result.Requests, &collect.Request{
 			Method:   "GET",
 			Task:     ctx.Req.Task,
-			Url:      u,
+			URL:      u,
 			Depth:    ctx.Req.Depth + 1,
 			RuleName: "解析阳台房",
 		})
 	}
+
 	return result, nil
 }

@@ -10,10 +10,10 @@ import (
 )
 
 type SQLStorage struct {
-	dataCells   []*storage.DataCell // 分批输出结果缓存
-	columnNames []sqldb.Field       // 标题字段
-	db          sqldb.DBer
-	Table       map[string]struct{}
+	dataCells []*storage.DataCell // 分批输出结果缓存
+	// columnNames []sqldb.Field       // 标题字段
+	db    sqldb.DBer
+	Table map[string]struct{}
 	options
 }
 
@@ -22,11 +22,14 @@ func New(opts ...Option) (*SQLStorage, error) {
 	for _, opt := range opts {
 		opt(&options)
 	}
+
 	s := &SQLStorage{}
 	s.options = options
 	s.Table = make(map[string]struct{})
+
 	var err error
-	s.db, err = sqldb.New(sqldb.WithConnUrl(s.sqlUrl), sqldb.WithLogger(s.logger))
+	s.db, err = sqldb.New(sqldb.WithConnURL(s.sqlURL), sqldb.WithLogger(s.logger))
+
 	if err != nil {
 		return nil, err
 	}
@@ -44,21 +47,29 @@ func (s *SQLStorage) Save(dataCells ...*storage.DataCell) error {
 				ColumnNames: columnNames,
 				AutoKey:     true,
 			})
+
 			if err != nil {
 				s.logger.Error("create table failed", zap.Error(err))
+
 				return err
 			}
+
 			s.Table[name] = struct{}{}
 		}
+
 		if len(s.dataCells) >= s.BatchCount {
 			err := s.Flush()
+
 			if err != nil {
 				s.logger.Error("flush failed", zap.Error(err))
+
 				return err
 			}
 		}
+
 		s.dataCells = append(s.dataCells, cell)
 	}
+
 	return nil
 }
 
@@ -72,10 +83,12 @@ func getFields(cell *storage.DataCell) []sqldb.Field {
 	for _, field := range fields {
 		columnNames = append(columnNames, sqldb.Field{Title: field, Type: "MEDIUMTEXT"})
 	}
+
 	columnNames = append(columnNames,
-		sqldb.Field{Title: "Url", Type: "VARCHAR(255)"},
+		sqldb.Field{Title: "URL", Type: "VARCHAR(255)"},
 		sqldb.Field{Title: "Time", Type: "VARCHAR(255)"},
 	)
+
 	return columnNames
 }
 
@@ -83,23 +96,29 @@ func (s *SQLStorage) Flush() error {
 	if len(s.dataCells) == 0 {
 		return nil
 	}
+
 	defer func() {
 		s.dataCells = nil
 	}()
+
 	args := make([]any, 0)
+
 	for _, dataCell := range s.dataCells {
 		taskName := dataCell.Data["Task"].(string)
 		ruleName := dataCell.Data["Rule"].(string)
 		fields := engine.GetFields(taskName, ruleName)
+
 		data := dataCell.Data["Data"].(map[string]any)
+
 		var vals []string
+
 		for _, field := range fields {
 			v := data[field]
-			switch v.(type) {
+			switch v := v.(type) {
 			case nil:
 				vals = append(vals, "")
 			case string:
-				vals = append(vals, v.(string))
+				vals = append(vals, v)
 			default:
 				buf, err := json.Marshal(v)
 				if err != nil {
@@ -107,10 +126,11 @@ func (s *SQLStorage) Flush() error {
 				} else {
 					vals = append(vals, string(buf))
 				}
-
 			}
 		}
-		vals = append(vals, dataCell.Data["Url"].(string), dataCell.Data["Time"].(string))
+
+		vals = append(vals, dataCell.Data["URL"].(string), dataCell.Data["Time"].(string))
+
 		for _, val := range vals {
 			args = append(args, val)
 		}

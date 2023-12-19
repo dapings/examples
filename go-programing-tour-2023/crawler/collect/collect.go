@@ -20,15 +20,17 @@ import (
 )
 
 type Fetcher interface {
-	Get(*Request) ([]byte, error)
+	Get(req *Request) ([]byte, error)
 }
 
 type BaseFetch struct{}
 
 func (BaseFetch) Get(request *Request) ([]byte, error) {
-	resp, err := http.Get(request.Url)
+	resp, err := http.Get(request.URL)
+
 	if err != nil {
-		log.Printf("fetch url(%s) error: %v", request.Url, err)
+		log.Printf("fetch url(%s) error: %v", request.URL, err)
+
 		return nil, err
 	}
 
@@ -41,6 +43,7 @@ func (BaseFetch) Get(request *Request) ([]byte, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("error status code: %v", resp.StatusCode)
+
 		return nil, fmt.Errorf("error status code: %v", resp.StatusCode)
 	}
 
@@ -48,28 +51,34 @@ func (BaseFetch) Get(request *Request) ([]byte, error) {
 	e := DetermineEncoding(bodyReader)
 	// 将HTML文本从特定编码转换为utf8编码
 	utf8Reader := transform.NewReader(bodyReader, e.NewDecoder())
+
 	return io.ReadAll(utf8Reader)
 }
 
 type BrowserFetch struct {
 	Timeout time.Duration
-	Proxy   proxy.ProxyFunc
+	Proxy   proxy.Func
 	Logger  *zap.Logger
 }
 
 // Get 模拟浏览器访问
 func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 	client := &http.Client{Timeout: b.Timeout}
+
 	if b.Proxy != nil {
 		transport := http.DefaultTransport.(*http.Transport)
 		transport.Proxy = b.Proxy
 		client.Transport = transport
 	}
-	req, err := http.NewRequest("GET", request.Url, nil)
+
+	req, err := http.NewRequest("GET", request.URL, nil)
+
 	if err != nil {
 		b.Logger.Error("http new request filed: ", zap.Error(err))
-		return nil, fmt.Errorf("http new request filed: %v", err)
+
+		return nil, fmt.Errorf("http new request filed: %w", err)
 	}
+
 	if len(request.Task.Cookie) > 0 {
 		req.Header.Set("Cookie", request.Task.Cookie)
 	}
@@ -78,7 +87,8 @@ func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 
 	resp, doErr := client.Do(req)
 	if doErr != nil {
-		b.Logger.Error("fetch url error: ", zap.String("fetch url", request.Url), zap.Error(doErr))
+		b.Logger.Error("fetch url error: ", zap.String("fetch url", request.URL), zap.Error(doErr))
+
 		return nil, doErr
 	}
 
@@ -86,6 +96,7 @@ func (b BrowserFetch) Get(request *Request) ([]byte, error) {
 	e := DetermineEncoding(bodyReader)
 	// 将HTML文本从特定编码转换为utf8编码
 	utf8Reader := transform.NewReader(bodyReader, e.NewDecoder())
+
 	return io.ReadAll(utf8Reader)
 }
 
@@ -94,12 +105,14 @@ func DetermineEncoding(r *bufio.Reader) encoding.Encoding {
 	// 如果返回的文本小于1024个字节，则说明文本有问题，直接使用utf8编码
 	peek, err := r.Peek(1024)
 	if err != nil {
-		log.Printf("determin encoding err: %v", err)
+		zap.L().Error("determine encoding failed", zap.Error(err))
+
 		return unicode.UTF8
 	}
 
 	// 检测并返回当前HTML文本的编码格式
 	e, _, _ := charset.DetermineEncoding(peek, "")
+
 	return e
 }
 
@@ -117,11 +130,11 @@ func HandleLinks(body []byte) {
 	numLinks = bytes.Count(body, []byte("<a"))
 	log.Printf("homepage has %d links!\n", numLinks)
 
-	exist := strings.Contains(string(body), "疫情")
+	exist := strings.Contains(string(body), `疫情`)
 	log.Printf("是否存在疫情:%v\n", exist)
 
-	exist = bytes.Contains(body, []byte("疫情"))
+	exist = bytes.Contains(body, []byte(`疫情`))
 	log.Printf("是否存在疫情:%v\n", exist)
 
-	// log.Printf("body:%s", string(body))
+	log.Printf("body:%s", string(body))
 }

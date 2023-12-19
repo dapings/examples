@@ -14,6 +14,7 @@ var (
 		genOperaUA,
 	}
 
+	// nolint
 	uaGensMobile = []func() string{
 		genMobileUcwebUA,
 		genMobileNexus10UA,
@@ -29,6 +30,7 @@ func GenerateRandomUA() string {
 func genFirefoxUA() string {
 	version := ffVersions[rand.Intn(len(ffVersions))]
 	os := osStrings[rand.Intn(len(osStrings))]
+
 	return fmt.Sprintf("Mozilla/5.0 (%s; rv:%.1f) Gecko/20100101 Firefox/%.1f", os, version, version)
 }
 
@@ -37,6 +39,7 @@ func genFirefoxUA() string {
 func genChromeUA() string {
 	version := chromeVersions[rand.Intn(len(chromeVersions))]
 	os := osStrings[rand.Intn(len(osStrings))]
+
 	return fmt.Sprintf("Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36", os, version)
 }
 
@@ -48,6 +51,7 @@ func genEdgeUA() string {
 	chromeVersion := splitVers[0]
 	edgeVersion := splitVers[1]
 	os := osStrings[rand.Intn(len(osStrings))]
+
 	return fmt.Sprintf("Mozilla/5.0 (%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/537.36 Edg/%s",
 		os, chromeVersion, edgeVersion)
 }
@@ -57,6 +61,7 @@ func genEdgeUA() string {
 func genOperaUA() string {
 	version := operaVersions[rand.Intn(len(operaVersions))]
 	os := osStrings[rand.Intn(len(osStrings))]
+
 	return fmt.Sprintf("Opera/9.80 (%s; U; en) Presto/%s", os, version)
 }
 
@@ -66,6 +71,7 @@ func genMobileUcwebUA() string {
 	device := ucwebDevices[rand.Intn(len(ucwebDevices))]
 	version := ucwebVersions[rand.Intn(len(ucwebVersions))]
 	android := androidVersions[rand.Intn(len(androidVersions))]
+
 	return fmt.Sprintf("UCWEB/2.0 (Java; U; MIDP-2.0; Nokia203/20.37) U2/1.0.0 UCMini/%s (SpeedMode; Proxy; Android %s; %s ) U2/1.0.0 Mobile",
 		version, android, device)
 }
@@ -77,5 +83,6 @@ func genMobileNexus10UA() string {
 	android := androidVersions[rand.Intn(len(androidVersions))]
 	chrome := chromeVersions[rand.Intn(len(chromeVersions))]
 	safari := nexus10Safari[rand.Intn(len(nexus10Safari))]
+
 	return fmt.Sprintf("Mozilla/5.0 (Linux; Android %s; Nexus 10 Build/%s) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/%s Safari/%s", android, build, chrome, safari)
 }

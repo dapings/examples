@@ -10,19 +10,20 @@ import (
 )
 
 type Parser interface {
-	ReadDocument([]byte)
-	WithHeaderSyn(string)
+	ReadDocument(body []byte)
 }
+
+// 包括接收器的每个参数在输入函数/方法时被复制，返回时，对副本所做的更改将丢失。
 
 type BaseParse struct {
 	matchSyn string
 }
 
-func (p BaseParse) WithHeaderSyn(headerReg string) {
+func (p *BaseParse) HeaderSyn(headerReg string) {
 	p.matchSyn = headerReg
 }
 
-func (p BaseParse) ReadDocument(_ []byte) {}
+func (p *BaseParse) ReadDocument(_ []byte) {}
 
 type RegexpParse struct {
 	BaseParse
@@ -59,6 +60,7 @@ func (p XPathParse) ReadDocument(body []byte) {
 	doc, err := htmlquery.Parse(bytes.NewReader(body))
 	if err != nil {
 		log.Printf("htmlquery.Parse filed: %v", err)
+
 		return
 	}
 	// 通过XPath语法查找符合条件的节点
@@ -78,6 +80,7 @@ func (p CSSSelection) ReadDocument(body []byte) {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
 	if err != nil {
 		log.Printf("load content filed: %v", err)
+
 		return
 	}
 	// 根据CSS标签选择器的语法查找匹配的标签，并遍历输出a标签中的文本
