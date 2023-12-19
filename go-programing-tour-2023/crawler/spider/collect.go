@@ -1,4 +1,4 @@
-package collect
+package spider
 
 import (
 	"bufio"
@@ -18,10 +18,6 @@ import (
 	"golang.org/x/text/encoding/unicode"
 	"golang.org/x/text/transform"
 )
-
-type Fetcher interface {
-	Get(req *Request) ([]byte, error)
-}
 
 type BaseFetch struct{}
 

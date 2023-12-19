@@ -1,7 +1,8 @@
-package storage
+package spider
 
 type (
 	DataCell struct {
+		Task *Task
 		Data map[string]interface{}
 	}
 
