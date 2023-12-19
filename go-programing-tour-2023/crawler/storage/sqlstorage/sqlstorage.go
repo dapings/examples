@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/sqldb"
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/storage"
 	"go.uber.org/zap"
 )
 
 type SQLStorage struct {
-	dataCells []*storage.DataCell // 分批输出结果缓存
+	dataCells []*spider.DataCell // 分批输出结果缓存
 	// columnNames []sqldb.Field       // 标题字段
 	db    sqldb.DBer
 	Table map[string]struct{}
@@ -37,7 +37,7 @@ func New(opts ...Option) (*SQLStorage, error) {
 	return s, nil
 }
 
-func (s *SQLStorage) Save(dataCells ...*storage.DataCell) error {
+func (s *SQLStorage) Save(dataCells ...*spider.DataCell) error {
 	for _, cell := range dataCells {
 		name := cell.GetTableName()
 		if _, ok := s.Table[name]; !ok {
@@ -74,7 +74,7 @@ func (s *SQLStorage) Save(dataCells ...*storage.DataCell) error {
 }
 
 // 解析出标题字段
-func getFields(cell *storage.DataCell) []sqldb.Field {
+func getFields(cell *spider.DataCell) []sqldb.Field {
 	taskName := cell.Data["Task"].(string)
 	ruleName := cell.Data["Rule"].(string)
 	fields := engine.GetFields(taskName, ruleName)

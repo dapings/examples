@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 )
 
 var (
@@ -18,18 +18,18 @@ const (
 	FindSumRoomTaskName = "find_douban_sun_room"
 )
 
-var DoubangroupTask = &collect.Task{
-	Property: collect.Property{
+var DoubangroupTask = &spider.Task{
+	Property: spider.Property{
 		Name:     FindSumRoomTaskName,
 		Cookie:   cookie,
 		WaitTime: 2,
 		MaxDepth: 5,
 	},
-	Rule: collect.RuleTree{
-		Root: func() ([]*collect.Request, error) {
-			var roots []*collect.Request
+	Rule: spider.RuleTree{
+		Root: func() ([]*spider.Request, error) {
+			var roots []*spider.Request
 			for i := 0; i < 25; i += 25 {
-				roots = append(roots, &collect.Request{
+				roots = append(roots, &spider.Request{
 					URL:      fmt.Sprintf(discussionURL, i),
 					Method:   "GET",
 					Priority: 1,
@@ -39,31 +39,31 @@ var DoubangroupTask = &collect.Task{
 
 			return roots, nil
 		},
-		Trunk: map[string]*collect.Rule{
+		Trunk: map[string]*spider.Rule{
 			"解析网站URL": {ParseFunc: ParseURL},
 			"解析阳台房":   {ParseFunc: GetSunRoom},
 		},
 	},
 }
 
-func GetSunRoom(ctx *collect.Context) (collect.ParseResult, error) {
+func GetSunRoom(ctx *spider.Context) (spider.ParseResult, error) {
 	re := regexp.MustCompile(ContentRe)
 
 	if ok := re.Match(ctx.Body); !ok {
-		return collect.ParseResult{Items: make([]any, 0)}, nil
+		return spider.ParseResult{Items: make([]any, 0)}, nil
 	}
 
-	return collect.ParseResult{Items: []any{ctx.Req.URL}}, nil
+	return spider.ParseResult{Items: []any{ctx.Req.URL}}, nil
 }
 
-func ParseURL(ctx *collect.Context) (collect.ParseResult, error) {
+func ParseURL(ctx *spider.Context) (spider.ParseResult, error) {
 	re := regexp.MustCompile(urlListRe)
 	matches := re.FindAllSubmatch(ctx.Body, -1)
-	result := collect.ParseResult{}
+	result := spider.ParseResult{}
 
 	for _, m := range matches {
 		u := string(m[1])
-		result.Requests = append(result.Requests, &collect.Request{
+		result.Requests = append(result.Requests, &spider.Request{
 			Method:   "GET",
 			Task:     ctx.Req.Task,
 			URL:      u,

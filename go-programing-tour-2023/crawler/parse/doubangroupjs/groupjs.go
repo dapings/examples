@@ -1,7 +1,7 @@
 package doubangroupjs
 
 import (
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 )
 
 var (
@@ -12,8 +12,8 @@ const (
 	JSFindSumRoomTaskName = "js_find_douban_sun_room"
 )
 
-var DoubangroupJSTask = &collect.TaskModel{
-	Property: collect.Property{
+var DoubangroupJSTask = &spider.TaskModel{
+	Property: spider.Property{
 		Name:     JSFindSumRoomTaskName,
 		Cookie:   cookie,
 		WaitTime: 2,
@@ -33,7 +33,7 @@ var DoubangroupJSTask = &collect.TaskModel{
 				console.log(arr[0].URL);
 				AddJsReq(arr);
 	`,
-	Rules: []collect.RuleModel{
+	Rules: []spider.RuleModel{
 		{
 			Name: "解析网站URL",
 			ParseFunc: `

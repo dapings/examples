@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"go.uber.org/zap"
 )
 
@@ -28,16 +28,16 @@ var (
 	intoReg   = regexp.MustCompile(`<div class="intro">[\d\D]*?<p>([^<]+)</p></div>`)
 )
 
-var DoubanBookTask = &collect.Task{
-	Property: collect.Property{
+var DoubanBookTask = &spider.Task{
+	Property: spider.Property{
 		Name:     BookListTaskName,
 		Cookie:   cookie,
 		WaitTime: 2,
 		MaxDepth: 5,
 	},
-	Rule: collect.RuleTree{
-		Root: func() ([]*collect.Request, error) {
-			roots := []*collect.Request{
+	Rule: spider.RuleTree{
+		Root: func() ([]*spider.Request, error) {
+			roots := []*spider.Request{
 				{
 					URL:      bookURL,
 					Method:   "GET",
@@ -48,7 +48,7 @@ var DoubanBookTask = &collect.Task{
 
 			return roots, nil
 		},
-		Trunk: map[string]*collect.Rule{
+		Trunk: map[string]*spider.Rule{
 			"数据tag": {ParseFunc: ParseTag},
 			"书籍列表":  {ParseFunc: ParseBookList},
 			"书籍简介": {
@@ -67,14 +67,14 @@ var DoubanBookTask = &collect.Task{
 	},
 }
 
-func ParseTag(ctx *collect.Context) (collect.ParseResult, error) {
+func ParseTag(ctx *spider.Context) (spider.ParseResult, error) {
 	re := regexp.MustCompile(tagReg)
 	matches := re.FindAllSubmatch(ctx.Body, -1)
-	result := collect.ParseResult{}
+	result := spider.ParseResult{}
 
 	for _, m := range matches {
 		result.Requests = append(
-			result.Requests, &collect.Request{
+			result.Requests, &spider.Request{
 				Method:   "GET",
 				Task:     ctx.Req.Task,
 				URL:      bookURL + string(m[1]),
@@ -88,13 +88,13 @@ func ParseTag(ctx *collect.Context) (collect.ParseResult, error) {
 	return result, nil
 }
 
-func ParseBookList(ctx *collect.Context) (collect.ParseResult, error) {
+func ParseBookList(ctx *spider.Context) (spider.ParseResult, error) {
 	re := regexp.MustCompile(bookListReg)
 	matches := re.FindAllSubmatch(ctx.Body, -1)
-	result := collect.ParseResult{}
+	result := spider.ParseResult{}
 
 	for _, m := range matches {
-		req := &collect.Request{
+		req := &spider.Request{
 			Priority: 100,
 			Method:   "GET",
 			Task:     ctx.Req.Task,
@@ -102,13 +102,13 @@ func ParseBookList(ctx *collect.Context) (collect.ParseResult, error) {
 			Depth:    ctx.Req.Depth + 1,
 			RuleName: "书籍简介",
 		}
-		req.TmpData = &collect.Temp{}
+		req.TmpData = &spider.Temp{}
 
 		err := req.TmpData.Set("book_name", string(m[2]))
 		if err != nil {
 			zap.L().Error("set tmp data failed", zap.Error(err))
 
-			return collect.ParseResult{}, err
+			return spider.ParseResult{}, err
 		}
 
 		result.Requests = append(result.Requests, req)
@@ -119,7 +119,7 @@ func ParseBookList(ctx *collect.Context) (collect.ParseResult, error) {
 	return result, nil
 }
 
-func ParseBookDetail(ctx *collect.Context) (collect.ParseResult, error) {
+func ParseBookDetail(ctx *spider.Context) (spider.ParseResult, error) {
 	bookName := ctx.Req.TmpData.Get("book_name")
 	page, _ := strconv.Atoi(ExtraString(ctx.Body, pageReg))
 	book := map[string]interface{}{
@@ -134,7 +134,7 @@ func ParseBookDetail(ctx *collect.Context) (collect.ParseResult, error) {
 
 	zap.S().Debugln("parse book detail", book)
 
-	return collect.ParseResult{Items: []any{ctx.Output(book)}}, nil
+	return spider.ParseResult{Items: []any{ctx.Output(book)}}, nil
 }
 
 func ExtraString(contents []byte, reg *regexp.Regexp) string {
