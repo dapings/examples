@@ -100,12 +100,17 @@ func main() {
 	go HandleHTTP()
 
 	// start grpc server
+	// option模式注入注册中心etcd的地址。
 	reg := etcdReg.NewRegistry(registry.Addrs(":2379"))
+	// 用option的模式注入参数；在默认情况下生成的服务器并不是gRPC类型的。
 	service := micro.NewService(
-		micro.Server(gs.NewServer(server.Id("1"))),
+		// gRPC插件生成一个gRPC Server
+		micro.Server(gs.NewServer(server.Id("1"))), // 指定特殊的ID来替换随机的ID
 		micro.Address(":9090"),
-		micro.Registry(reg),
-		micro.Name("go.micro.server.worker"),
+		micro.Name("go.micro.server.worker"), // 服务器的名字
+		// go-micro 注入etcd中的Key为/micro/registry/go.micro.server.worker/go.micro.server.worker-1
+		micro.Registry(reg), // 注入register模块，用于指定注册中心，并定时发送自己的健康状况用于保活
+		micro.WrapHandler(log.LogWrapper(logger)),
 	)
 	service.Init()
 	_ = pb.RegisterGreeterHandler(service.Server(), new(Greeter))
@@ -129,6 +134,7 @@ func HandleHTTP() {
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
+	// 指定要转发到那个gRPC服务器。
 	err := pb.RegisterGreeterGwFromEndpoint(ctx, mux, "localhost:9090", opts)
 	if err != nil {
 		fmt.Println(err)
