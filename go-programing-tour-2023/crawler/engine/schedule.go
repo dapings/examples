@@ -50,7 +50,7 @@ func (c *CrawlerStore) Add(task *spider.Task) {
 
 func (c *CrawlerStore) AddJSTask(m *spider.TaskModel) {
 	task := &spider.Task{
-		Property: m.Property,
+		// Property: m.Property,
 	}
 	task.Rule.Root = func() ([]*spider.Request, error) {
 		// allocate a new JavaScript runtime
@@ -207,12 +207,13 @@ func (e *Crawler) Run() {
 func (e *Crawler) Schedule() {
 	var reqQueue []*spider.Request
 
-	for _, seed := range e.Seeds {
-		task := Store.Hash[seed.Name]
-		task.Fetcher = seed.Fetcher
-		task.Storage = seed.Storage
-		task.Limit = seed.Limit
-		task.Logger = e.Logger
+	for _, task := range e.Seeds {
+		t, ok := Store.Hash[task.Name]
+		if !ok {
+			e.Logger.Error("not find preset tasks", zap.String("task name", task.Name))
+		}
+		// task.Logger = e.Logger
+		task.Rule = t.Rule
 		rootReqs, err := task.Rule.Root()
 
 		if err != nil {
@@ -302,15 +303,14 @@ func (e *Crawler) HandleResult() {
 		for _, item := range result.Items {
 			switch d := item.(type) {
 			case *spider.DataCell:
-				task := Store.Hash[d.GetTaskName()]
-
-				if err := task.Storage.Save(d); err != nil {
+				if err := d.Task.Storage.Save(d); err != nil {
 					// TODO: when store error, skip or other handle method
 					e.Logger.Error("task.Storage.Save failed", zap.Error(err))
 
 					continue
 				}
 			}
+
 			e.Logger.Sugar().Info("get result", item)
 		}
 	}

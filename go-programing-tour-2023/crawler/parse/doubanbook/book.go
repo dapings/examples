@@ -29,19 +29,14 @@ var (
 )
 
 var DoubanBookTask = &spider.Task{
-	Property: spider.Property{
-		Name:     BookListTaskName,
-		Cookie:   cookie,
-		WaitTime: 2,
-		MaxDepth: 5,
-	},
+	Options: spider.Options{Name: BookListTaskName},
 	Rule: spider.RuleTree{
 		Root: func() ([]*spider.Request, error) {
 			roots := []*spider.Request{
 				{
+					Priority: 1,
 					URL:      bookURL,
 					Method:   "GET",
-					Priority: 1,
 					RuleName: "数据tag",
 				},
 			}

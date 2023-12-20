@@ -19,12 +19,7 @@ const (
 )
 
 var DoubangroupTask = &spider.Task{
-	Property: spider.Property{
-		Name:     FindSumRoomTaskName,
-		Cookie:   cookie,
-		WaitTime: 2,
-		MaxDepth: 5,
-	},
+	Options: spider.Options{Name: FindSumRoomTaskName},
 	Rule: spider.RuleTree{
 		Root: func() ([]*spider.Request, error) {
 			var roots []*spider.Request

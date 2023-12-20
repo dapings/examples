@@ -1,4 +1,4 @@
-package spider
+package collect
 
 import (
 	"bufio"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/extensions"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"go.uber.org/zap"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
@@ -21,11 +22,11 @@ import (
 
 type BaseFetch struct{}
 
-func (BaseFetch) Get(request *Request) ([]byte, error) {
-	resp, err := http.Get(request.URL)
+func (BaseFetch) Get(req *spider.Request) ([]byte, error) {
+	resp, err := http.Get(req.URL)
 
 	if err != nil {
-		log.Printf("fetch url(%s) error: %v", request.URL, err)
+		log.Printf("fetch url(%s) error: %v", req.URL, err)
 
 		return nil, err
 	}
@@ -58,7 +59,7 @@ type BrowserFetch struct {
 }
 
 // Get 模拟浏览器访问
-func (b BrowserFetch) Get(request *Request) ([]byte, error) {
+func (b BrowserFetch) Get(request *spider.Request) ([]byte, error) {
 	client := &http.Client{Timeout: b.Timeout}
 
 	if b.Proxy != nil {
