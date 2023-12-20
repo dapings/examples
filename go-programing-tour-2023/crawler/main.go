@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/collect"
@@ -36,7 +39,24 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+var (
+	BuildTS   = "None"
+	GitHash   = "None"
+	GitBranch = "None"
+	Version   = "None"
+)
+
+var (
+	PrintVersion = flag.Bool("version", false, "print the version of this build")
+)
+
 func main() {
+	flag.Parse()
+	if *PrintVersion {
+		Printer()
+		os.Exit(0)
+	}
+
 	var err error
 	// load config
 	enc := toml.NewEncoder()
@@ -172,6 +192,26 @@ func ParseTaskConfig(logger *zap.Logger, f spider.Fetcher, s spider.Storage, cfg
 	}
 
 	return tasks
+}
+
+func GetVersion() string {
+	if GitHash != "" {
+		h := GitHash
+		if len(h) > 7 {
+			h = h[:7]
+		}
+		return fmt.Sprintf("%s-%s", Version, h)
+	}
+
+	return Version
+}
+
+// Printer print build version.
+func Printer() {
+	fmt.Println("Version:          ", GetVersion())
+	fmt.Println("Git Branch:       ", GitBranch)
+	fmt.Println("Git Commit:       ", GitHash)
+	fmt.Println("Build Time (UTC): ", BuildTS)
 }
 
 type ServerConfig struct {
