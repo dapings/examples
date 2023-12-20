@@ -12,7 +12,7 @@ import (
 
 var (
 	driverNameWithMySQL = "mysql"
-	ConStrWithMySQL     = "root:123456@tcp(127.0.0.1:3326)/crawler?charset=utf8"
+	ConnStrWithMySQL    = "root:123456@tcp(127.0.0.1:3326)/crawler?charset=utf8m4"
 )
 
 type DBer interface {

@@ -108,10 +108,10 @@ func main() {
 	var storager spider.Storage
 
 	sqlURL := cfg.Get("storage", "sqlURL").String("")
-	sqldb.ConStrWithMySQL = sqlURL
+	sqldb.ConnStrWithMySQL = sqlURL
 
 	if storager, err = sqlstorage.New(
-		sqlstorage.WithSQLURL(sqldb.ConStrWithMySQL),
+		sqlstorage.WithSQLURL(sqldb.ConnStrWithMySQL),
 		sqlstorage.WithLogger(logger.Named("sqlDB")),
 		sqlstorage.WithBatchCount(2),
 	); err != nil {
