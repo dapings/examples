@@ -2,6 +2,7 @@ package sqlstorage
 
 import (
 	"encoding/json"
+	"errors"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
@@ -51,7 +52,7 @@ func (s *SQLStorage) Save(dataCells ...*spider.DataCell) error {
 			if err != nil {
 				s.logger.Error("create table failed", zap.Error(err))
 
-				return err
+				continue
 			}
 
 			s.Table[name] = struct{}{}
@@ -103,9 +104,17 @@ func (s *SQLStorage) Flush() error {
 
 	args := make([]any, 0)
 
+	var taskName, ruleName string
+	var ok bool
 	for _, dataCell := range s.dataCells {
-		taskName := dataCell.Data["Task"].(string)
-		ruleName := dataCell.Data["Rule"].(string)
+		if ruleName, ok = dataCell.Data["Rule"].(string); !ok {
+			return errors.New("no rule field")
+		}
+
+		if taskName, ok = dataCell.Data["Task"].(string); !ok {
+			return errors.New("no task field")
+		}
+
 		fields := engine.GetFields(taskName, ruleName)
 
 		data := dataCell.Data["Data"].(map[string]any)
@@ -129,7 +138,13 @@ func (s *SQLStorage) Flush() error {
 			}
 		}
 
-		vals = append(vals, dataCell.Data["URL"].(string), dataCell.Data["Time"].(string))
+		if v, ok := dataCell.Data["URL"].(string); ok {
+			vals = append(vals, v)
+		}
+
+		if v, ok := dataCell.Data["Time"].(string); ok {
+			vals = append(vals, v)
+		}
 
 		for _, val := range vals {
 			args = append(args, val)

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 
+	_ "github.com/go-sql-driver/mysql"
+
 	"go.uber.org/zap"
 )
 
@@ -88,6 +90,20 @@ func (d *SQLDB) CreateTable(t TableData) error {
 	sqlStatement = sqlStatement[:len(sqlStatement)-1] + `) ENGINE=InnoDB default CHARSET=utf8mb4;`
 
 	d.logger.Debug("create table", zap.String("sql", sqlStatement))
+
+	_, err := d.db.Exec(sqlStatement)
+
+	return err
+}
+
+func (d *SQLDB) DropTable(t TableData) error {
+	if len(t.ColumnNames) == 0 {
+		return errors.New("when drop table, column can not be empty")
+	}
+
+	sqlStatement := `DROP TABLE ` + t.TableName
+
+	d.logger.Debug("drop table", zap.String("sql", sqlStatement))
 
 	_, err := d.db.Exec(sqlStatement)
 
