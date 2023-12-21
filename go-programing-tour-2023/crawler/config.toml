@@ -9,7 +9,7 @@ timeout = 3000
 proxy = ["http://127.0.0.1:8888", "http://127.0.0.1:8888"]
 
 [storage]
-sqlURL = "root:123456@tcp(127.0.0.1:3326)/crawler?charset=utf8"
+sqlURL = "root:123456@tcp(127.0.0.1:3326)/crawler?charset=utf8mb4"
 
 [GRPCServer]
 HTTPListenAddress = ":8080"
@@ -20,3 +20,13 @@ RegisterTTL = 60
 RegisterInterval = 15
 ClientTimeOut   = 10
 Name = "go.micro.server.worker"
+
+[MasterServer]
+HTTPListenAddress = ":8081"
+GRPCListenAddress = ":9091"
+ID = "1"
+RegistryAddress = ":2379"
+RegisterTTL = 60
+RegisterInterval = 15
+ClientTimeOut   = 10
+Name = "go.micro.server.master"
