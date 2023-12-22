@@ -130,6 +130,16 @@ func TestInsert(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "no column",
+			args: args{TableData{
+				TableName:   tableName,
+				ColumnNames: nil,
+				Args:        []any{"book1", 2},
+				DataCount:   1,
+			}},
+			wantErr: true,
+		},
+		{
 			name: "insert_multi_data",
 			args: args{TableData{
 				TableName:   tableName,
@@ -157,7 +167,7 @@ func TestInsert(t *testing.T) {
 				Args:        []any{"book2", "none"},
 				DataCount:   1,
 			}},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 
