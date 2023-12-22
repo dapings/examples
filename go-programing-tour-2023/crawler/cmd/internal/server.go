@@ -38,10 +38,12 @@ type ServerConfig struct {
 	ClientTimeOut    int
 }
 
-func RunGRPCServer(logger *zap.Logger, cfg ServerConfig) {
+func RunGRPCServer(logger *zap.Logger, cfg ServerConfig, reg registry.Registry) {
 	// start grpc server
-	// option模式注入注册中心etcd的地址。
-	reg := etcdReg.NewRegistry(registry.Addrs(cfg.RegistryAddr))
+	if reg == nil {
+		// option模式注入注册中心etcd的地址。
+		reg = etcdReg.NewRegistry(registry.Addrs(cfg.RegistryAddr))
+	}
 	// 用option的模式注入参数；在默认情况下生成的服务器并不是gRPC类型的。
 	service := micro.NewService(
 		// gRPC插件生成一个gRPC Server

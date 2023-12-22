@@ -20,6 +20,8 @@ var (
 		},
 	}
 
+	WorkerServiceName = "go.micro.server.worker"
+
 	WorkerHTTPListenAddr string
 	WorkerGRPCListenAddr string
 	workerID             string
@@ -74,6 +76,7 @@ func RunWorker() {
 	sconfig.ID = workerID
 	sconfig.HTTPListenAddr = WorkerHTTPListenAddr
 	sconfig.GRPCListenAddr = WorkerGRPCListenAddr
+	WorkerServiceName = sconfig.Name
 
 	// worker start
 	// go s.Run()
@@ -82,5 +85,5 @@ func RunWorker() {
 	go internal.RunHTTPServer(logger, *sconfig)
 
 	// start grpc server
-	internal.RunGRPCServer(logger, *sconfig)
+	internal.RunGRPCServer(logger, *sconfig, nil)
 }

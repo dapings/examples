@@ -3,8 +3,10 @@ package cmd
 import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
+	"github.com/go-micro/plugins/v4/registry/etcd"
 	"github.com/spf13/cobra"
 	"go-micro.dev/v4/config"
+	"go-micro.dev/v4/registry"
 	"go.uber.org/zap"
 )
 
@@ -50,11 +52,14 @@ func RunMaster() {
 		panic(err)
 	}
 
+	reg := etcd.NewRegistry(registry.Addrs(sconfig.RegistryAddr))
+
 	if _, err = master.New(
 		masterID,
 		master.WithLogger(logger.Named("master")),
 		master.WithGRPCAddr(MasterGRPCListenAddr),
 		master.WithRegistryURL(sconfig.RegistryAddr),
+		master.WithRegistry(reg),
 	); err != nil {
 		panic(err)
 	}
@@ -67,5 +72,5 @@ func RunMaster() {
 	go internal.RunHTTPServer(logger, *sconfig)
 
 	// start grpc server
-	internal.RunGRPCServer(logger, *sconfig)
+	internal.RunGRPCServer(logger, *sconfig, reg)
 }
