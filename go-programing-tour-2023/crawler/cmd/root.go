@@ -17,16 +17,6 @@ var (
 		},
 	}
 
-	masterCmd = &cobra.Command{
-		Use:   "master",
-		Short: "run master service.",
-		Long:  "run master service.",
-		Args:  cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			RunMaster()
-		},
-	}
-
 	workerCmd = &cobra.Command{
 		Use:   "worker",
 		Short: "run worker service.",
