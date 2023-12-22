@@ -16,16 +16,6 @@ var (
 			Printer()
 		},
 	}
-
-	workerCmd = &cobra.Command{
-		Use:   "worker",
-		Short: "run worker service.",
-		Long:  "run worker service.",
-		Args:  cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			RunWorker()
-		},
-	}
 )
 
 func Execute() {

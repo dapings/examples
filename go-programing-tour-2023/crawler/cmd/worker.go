@@ -5,9 +5,32 @@ import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
+	"github.com/spf13/cobra"
 	"go-micro.dev/v4/config"
 	"go.uber.org/zap"
 )
+
+var (
+	workerCmd = &cobra.Command{
+		Use:   "worker",
+		Short: "run worker service.",
+		Long:  "run worker service.",
+		Args:  cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			RunWorker()
+		},
+	}
+
+	WorkerHTTPListenAddr string
+	WorkerGRPCListenAddr string
+	workerID             string
+)
+
+func init() {
+	workerCmd.Flags().StringVar(&workerID, "id", "1", "set worker id")
+	workerCmd.Flags().StringVar(&WorkerHTTPListenAddr, "http_addr", ":8080", "set HTTP listen addr")
+	workerCmd.Flags().StringVar(&WorkerGRPCListenAddr, "grpc_addr", ":9090", "set gRPC listen addr")
+}
 
 func RunWorker() {
 	var (
@@ -49,8 +72,12 @@ func RunWorker() {
 		panic(err)
 	}
 
+	sconfig.ID = workerID
+	sconfig.HTTPListenAddr = WorkerHTTPListenAddr
+	sconfig.GRPCListenAddr = WorkerGRPCListenAddr
+
 	// worker start
-	go s.Run()
+	// go s.Run()
 
 	// start http proxy to gRPC
 	go internal.RunHTTPServer(logger, *sconfig)

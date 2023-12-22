@@ -19,15 +19,15 @@ var (
 		},
 	}
 
-	HTTPListenAddr string
-	GRPCListenAddr string
-	masterID       string
+	MasterHTTPListenAddr string
+	MasterGRPCListenAddr string
+	masterID             string
 )
 
 func init() {
 	masterCmd.Flags().StringVar(&masterID, "id", "1", "set master id")
-	masterCmd.Flags().StringVar(&HTTPListenAddr, "http_addr", ":8081", "set HTTP listen addr")
-	masterCmd.Flags().StringVar(&GRPCListenAddr, "grpc_addr", ":9091", "set gRPC listen addr")
+	masterCmd.Flags().StringVar(&MasterHTTPListenAddr, "http_addr", ":8081", "set HTTP listen addr")
+	masterCmd.Flags().StringVar(&MasterGRPCListenAddr, "grpc_addr", ":9091", "set gRPC listen addr")
 }
 
 func RunMaster() {
@@ -53,15 +53,15 @@ func RunMaster() {
 	if _, err = master.New(
 		masterID,
 		master.WithLogger(logger.Named("master")),
-		master.WithGRPCAddr(GRPCListenAddr),
+		master.WithGRPCAddr(MasterGRPCListenAddr),
 		master.WithRegistryURL(sconfig.RegistryAddr),
 	); err != nil {
 		panic(err)
 	}
 
 	sconfig.ID = masterID
-	sconfig.GRPCListenAddr = GRPCListenAddr
-	sconfig.HTTPListenAddr = HTTPListenAddr
+	sconfig.GRPCListenAddr = MasterGRPCListenAddr
+	sconfig.HTTPListenAddr = MasterHTTPListenAddr
 
 	// start http proxy to gRPC
 	go internal.RunHTTPServer(logger, *sconfig)
