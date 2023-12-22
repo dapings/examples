@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
 	"go-micro.dev/v4/config"
 	"go.uber.org/zap"
 )
@@ -23,6 +24,15 @@ func RunMaster() {
 	}
 
 	if sconfig, err = internal.ConfigMasterServer(cfg, logger); err != nil {
+		panic(err)
+	}
+
+	if _, err = master.New(
+		sconfig.ID,
+		master.WithLogger(logger.Named("master")),
+		master.WithGRPCAddr(sconfig.GRPCListenAddr),
+		master.WithRegistryURL(sconfig.RegistryAddr),
+	); err != nil {
 		panic(err)
 	}
 
