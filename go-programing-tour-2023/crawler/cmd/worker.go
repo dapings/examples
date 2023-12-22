@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
-	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/spf13/cobra"
@@ -41,8 +40,8 @@ func RunWorker() {
 		fetcher   spider.Fetcher
 		storager  spider.Storage
 		sconfig   *internal.ServerConfig
-		s         *engine.Crawler
-		err       error
+		// s         *engine.Crawler
+		err error
 	)
 
 	if cfg, err = internal.LoadConfig(); err != nil {
@@ -64,7 +63,7 @@ func RunWorker() {
 	}
 
 	// init tasks
-	if s, err = internal.ConfigTasks(cfg, fetcher, storager, logger); err != nil {
+	if _, err = internal.ConfigTasks(cfg, fetcher, storager, logger); err != nil {
 		panic(err)
 	}
 
