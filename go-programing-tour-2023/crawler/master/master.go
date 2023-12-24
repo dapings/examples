@@ -20,6 +20,7 @@ type Master struct {
 	ready       int32
 	leaderID    string
 	workerNodes map[string]*registry.Node
+	etcdCli     *clientv3.Client
 	options
 }
 
@@ -40,21 +41,25 @@ func New(id string, opts ...Option) (*Master, error) {
 	m.ID = genMasterID(id, ipv4, m.GRPCAddr)
 	m.logger.Sugar().Debugln("master_id:", m.ID)
 
+	// etcd cli
+	endpoints := []string{m.registryURL}
+	cli, cliErr := clientv3.New(clientv3.Config{Endpoints: endpoints})
+	if cliErr != nil {
+		m.logger.Error("etcd v3 client new failed", zap.Error(cliErr))
+
+		return nil, cliErr
+	}
+	m.etcdCli = cli
+
+	m.updateWorkerNodes()
+
 	go m.Campaign()
 
 	return &Master{}, nil
 }
 
 func (m *Master) Campaign() {
-	endpoints := []string{m.registryURL}
-	cli, err := clientv3.New(clientv3.Config{Endpoints: endpoints})
-	if err != nil {
-		m.logger.Error("etcd v3 client new failed", zap.Error(err))
-
-		panic(err)
-	}
-
-	s, sessionErr := concurrency.NewSession(cli, concurrency.WithTTL(5))
+	s, sessionErr := concurrency.NewSession(m.etcdCli, concurrency.WithTTL(5))
 	if sessionErr != nil {
 		m.logger.Error("etcd v3 concurrency new session failed", zap.Error(sessionErr))
 
@@ -91,7 +96,7 @@ func (m *Master) Campaign() {
 
 				go m.elect(e, leaderCh)
 			} else {
-				m.logger.Info("master change to leader")
+				m.logger.Info("master start change to leader")
 
 				m.leaderID = m.ID
 				if !m.IsLeader() {
@@ -105,7 +110,7 @@ func (m *Master) Campaign() {
 		case resp := <-workerNodeChange:
 			m.logger.Info("watch worker change", zap.Any("worker:", resp))
 
-			m.updateNodes()
+			m.updateWorkerNodes()
 		case <-time.After(20 * time.Second):
 			resp, err := e.Leader(context.Background())
 
@@ -169,7 +174,7 @@ func (m *Master) WatcherWorker() chan *registry.Result {
 	return ch
 }
 
-func (m *Master) updateNodes() {
+func (m *Master) updateWorkerNodes() {
 	services, err := m.registry.GetService(cmd.WorkerServiceName)
 	if err != nil {
 		m.logger.Error("get service", zap.Error(err))
