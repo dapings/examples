@@ -42,6 +42,7 @@ func RunWorker() {
 		fetcher   spider.Fetcher
 		storager  spider.Storage
 		sconfig   *internal.ServerConfig
+		seeds     []*spider.Task
 		// s         *engine.Crawler
 		err error
 	)
@@ -65,7 +66,11 @@ func RunWorker() {
 	}
 
 	// init tasks
-	if _, err = internal.ConfigTasks(cfg, fetcher, storager, logger); err != nil {
+	if seeds, err = internal.ConfigTasks(cfg, fetcher, storager, logger); err != nil {
+		panic(err)
+	}
+
+	if _, err = internal.ConfigWorkerEngine(seeds, fetcher, logger); err != nil {
 		panic(err)
 	}
 

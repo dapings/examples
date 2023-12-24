@@ -1,6 +1,7 @@
 package master
 
 import (
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"go-micro.dev/v4/registry"
 	"go.uber.org/zap"
 )
@@ -10,6 +11,7 @@ type options struct {
 	registryURL string
 	GRPCAddr    string
 	registry    registry.Registry
+	Seeds       []*spider.Task
 }
 
 type Option func(opts *options)
@@ -37,5 +39,11 @@ func WithGRPCAddr(addr string) Option {
 func WithRegistry(reg registry.Registry) Option {
 	return func(opts *options) {
 		opts.registry = reg
+	}
+}
+
+func WithSeeds(seeds []*spider.Task) Option {
+	return func(opts *options) {
+		opts.Seeds = seeds
 	}
 }

@@ -146,7 +146,7 @@ func ParseTaskConfig(logger *zap.Logger, f spider.Fetcher, s spider.Storage, cfg
 	return tasks
 }
 
-func ConfigTasks(cfg config.Config, f spider.Fetcher, storager spider.Storage, logger *zap.Logger) (*engine.Crawler, error) {
+func ConfigTasks(cfg config.Config, f spider.Fetcher, storager spider.Storage, logger *zap.Logger) ([]*spider.Task, error) {
 	// init tasks
 	// seeds slice cap
 	var seeds = make([]*spider.Task, 0, 1000)
@@ -159,6 +159,10 @@ func ConfigTasks(cfg config.Config, f spider.Fetcher, storager spider.Storage, l
 
 	seeds = ParseTaskConfig(logger, f, storager, taskCfg)
 
+	return seeds, nil
+}
+
+func ConfigWorkerEngine(seeds []*spider.Task, f spider.Fetcher, logger *zap.Logger) (*engine.Crawler, error) {
 	s := engine.NewEngine(
 		engine.WithWorkCount(5),
 		engine.WithFetcher(f),

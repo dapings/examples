@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/go-micro/plugins/v4/registry/etcd"
 	"github.com/spf13/cobra"
 	"go-micro.dev/v4/config"
@@ -36,6 +37,7 @@ func RunMaster() {
 	var (
 		cfg     config.Config
 		logger  *zap.Logger
+		seeds   []*spider.Task
 		sconfig *internal.ServerConfig
 		err     error
 	)
@@ -45,6 +47,10 @@ func RunMaster() {
 	}
 
 	if logger, err = internal.ConfigLogger(cfg); err != nil {
+		panic(err)
+	}
+
+	if seeds, err = internal.ConfigTasks(cfg, nil, nil, logger); err != nil {
 		panic(err)
 	}
 
@@ -60,6 +66,7 @@ func RunMaster() {
 		master.WithGRPCAddr(MasterGRPCListenAddr),
 		master.WithRegistryURL(sconfig.RegistryAddr),
 		master.WithRegistry(reg),
+		master.WithSeeds(seeds),
 	); err != nil {
 		panic(err)
 	}
