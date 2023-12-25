@@ -494,6 +494,12 @@ protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/goog
 --grpc-gateway_out=logtostderr=true,register_func_suffix=Gw:./protos/ \
 --micro_out=./protos/ --go_out=./protos/ --go-grpc_out=./protos/ \
 ./protos/*.proto
+
+# gateway when http method is DELETE except allow_delete_body option is true
+protoc -I. -I$GOPATH/src/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+--grpc-gateway_out=logtostderr=true,allow_delete_body=true,register_func_suffix=Gw:./protos/ \
+--go_out=./protos/ --go-grpc_out=./protos/ --micro_out=./protos/ \
+./protos/crawler/crawler.proto
 ```
 
 为了生成gRPC服务器，需要导入go-micro的gRP插件库(github.com/go-micro/plugins/v4/server/grpc)，生成一个gRPC Server注入micro.NewService 中。
