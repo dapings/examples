@@ -3,15 +3,18 @@ package master
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"reflect"
 	"sync/atomic"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
-	"github.com/coreos/etcd/clientv3/concurrency"
+	"github.com/bwmarrin/snowflake"
+
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd"
 	"go-micro.dev/v4/registry"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/client/v3/concurrency"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +23,8 @@ type Master struct {
 	ready       int32
 	leaderID    string
 	workerNodes map[string]*registry.Node
+	resources   map[string]*ResourceSpec
+	IDGen       *snowflake.Node
 	etcdCli     *clientv3.Client
 	options
 }
@@ -32,6 +37,14 @@ func New(id string, opts ...Option) (*Master, error) {
 		opt(&options)
 	}
 	m.options = options
+	m.resources = make(map[string]*ResourceSpec)
+
+	// ID gen by snowflake.
+	node, err := snowflake.NewNode(1)
+	if err != nil {
+		return nil, err
+	}
+	m.IDGen = node
 
 	ipv4, err := getLocalIP()
 	if err != nil {
@@ -52,8 +65,10 @@ func New(id string, opts ...Option) (*Master, error) {
 	m.etcdCli = cli
 
 	m.updateWorkerNodes()
+	m.AddSeed()
 
 	go m.Campaign()
+	go m.HandleMsg()
 
 	return &Master{}, nil
 }
@@ -100,7 +115,11 @@ func (m *Master) Campaign() {
 
 				m.leaderID = m.ID
 				if !m.IsLeader() {
-					m.BecomeLeader()
+					if err := m.BecomeLeader(); err != nil {
+						m.logger.Error("become leader failed", zap.Error(err))
+
+						// NOTE: 切换到 leader 失败后，如何处理？是再次选主？
+					}
 				}
 			}
 		case resp := <-leaderChange:
@@ -144,8 +163,13 @@ func (m *Master) IsLeader() bool {
 	return atomic.LoadInt32(&m.ready) != 0
 }
 
-func (m *Master) BecomeLeader() {
+func (m *Master) BecomeLeader() error {
+	if err := m.loadResource(); err != nil {
+		return fmt.Errorf("load resource failed:%w", err)
+	}
+
 	atomic.StoreInt32(&m.ready, 1)
+	return nil
 }
 
 func (m *Master) WatcherWorker() chan *registry.Result {
