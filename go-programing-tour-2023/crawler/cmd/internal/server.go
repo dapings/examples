@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
-	pb "github.com/dapings/examples/go-programing-tour-2023/crawler/protos/greeter"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/protos/crawler"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/protos/greeter"
 	etcdReg "github.com/go-micro/plugins/v4/registry/etcd"
 	gs "github.com/go-micro/plugins/v4/server/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -21,7 +22,7 @@ import (
 
 type Greeter struct{}
 
-func (g *Greeter) Hello(ctx context.Context, req *pb.Request, resp *pb.Response) error {
+func (g *Greeter) Hello(ctx context.Context, req *greeter.Request, resp *greeter.Response) error {
 	resp.Greeting = "Hello " + req.Name
 
 	return nil
@@ -38,7 +39,7 @@ type ServerConfig struct {
 	ClientTimeOut    int
 }
 
-func RunGRPCServer(logger *zap.Logger, cfg ServerConfig, reg registry.Registry) {
+func RunGRPCServer(hdlr crawler.CrawlerMasterHandler, logger *zap.Logger, cfg ServerConfig, reg registry.Registry) {
 	// start grpc server
 	if reg == nil {
 		// option模式注入注册中心etcd的地址。
@@ -66,7 +67,16 @@ func RunGRPCServer(logger *zap.Logger, cfg ServerConfig, reg registry.Registry) 
 
 	service.Init()
 
-	if err := pb.RegisterGreeterHandler(service.Server(), new(Greeter)); err != nil {
+	// register handler
+	var err error
+	if hdlr != nil {
+		err = crawler.RegisterCrawlerMasterHandler(service.Server(), hdlr)
+	} else {
+		// default greeter.
+		err = greeter.RegisterGreeterHandler(service.Server(), new(Greeter))
+	}
+
+	if err != nil {
 		logger.Fatal("register handler failed", zap.Error(err))
 	}
 
@@ -89,7 +99,7 @@ func RunHTTPServer(logger *zap.Logger, cfg ServerConfig) {
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
 	// 指定要转发到那个gRPC服务器。
-	err := pb.RegisterGreeterGwFromEndpoint(ctx, mux, cfg.GRPCListenAddr, opts)
+	err := crawler.RegisterCrawlerMasterGwFromEndpoint(ctx, mux, cfg.GRPCListenAddr, opts)
 	if err != nil {
 		logger.Fatal("pb register gw from ep failed", zap.Error(err))
 	}

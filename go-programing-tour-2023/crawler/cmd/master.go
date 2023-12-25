@@ -39,6 +39,7 @@ func RunMaster() {
 		logger  *zap.Logger
 		seeds   []*spider.Task
 		sconfig *internal.ServerConfig
+		m       *master.Master
 		err     error
 	)
 
@@ -60,7 +61,7 @@ func RunMaster() {
 
 	reg := etcd.NewRegistry(registry.Addrs(sconfig.RegistryAddr))
 
-	if _, err = master.New(
+	if m, err = master.New(
 		masterID,
 		master.WithLogger(logger.Named("master")),
 		master.WithGRPCAddr(MasterGRPCListenAddr),
@@ -68,6 +69,8 @@ func RunMaster() {
 		master.WithRegistry(reg),
 		master.WithSeeds(seeds),
 	); err != nil {
+		logger.Error("init master failed", zap.Error(err))
+
 		panic(err)
 	}
 
@@ -79,5 +82,5 @@ func RunMaster() {
 	go internal.RunHTTPServer(logger, *sconfig)
 
 	// start grpc server
-	internal.RunGRPCServer(logger, *sconfig, reg)
+	internal.RunGRPCServer(m, logger, *sconfig, reg)
 }
