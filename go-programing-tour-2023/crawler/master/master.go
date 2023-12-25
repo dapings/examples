@@ -22,7 +22,7 @@ type Master struct {
 	ID          string
 	ready       int32
 	leaderID    string
-	workerNodes map[string]*registry.Node
+	workerNodes map[string]*NodeSpec
 	resources   map[string]*ResourceSpec
 	IDGen       *snowflake.Node
 	etcdCli     *clientv3.Client
@@ -89,7 +89,7 @@ func (m *Master) Campaign() {
 	}(s)
 
 	// 创建一个新的etcd选举
-	e := concurrency.NewElection(s, "resources/election")
+	e := concurrency.NewElection(s, "/crawler/election")
 	leaderCh := make(chan error)
 
 	go m.elect(e, leaderCh)
@@ -130,6 +130,7 @@ func (m *Master) Campaign() {
 			m.logger.Info("watch worker change", zap.Any("worker:", resp))
 
 			m.updateWorkerNodes()
+			m.reAssign()
 		case <-time.After(20 * time.Second):
 			resp, err := e.Leader(context.Background())
 
@@ -164,9 +165,13 @@ func (m *Master) IsLeader() bool {
 }
 
 func (m *Master) BecomeLeader() error {
+	m.updateWorkerNodes()
+
 	if err := m.loadResource(); err != nil {
 		return fmt.Errorf("load resource failed:%w", err)
 	}
+
+	m.reAssign()
 
 	atomic.StoreInt32(&m.ready, 1)
 	return nil
@@ -206,10 +211,10 @@ func (m *Master) updateWorkerNodes() {
 		return
 	}
 
-	nodes := make(map[string]*registry.Node)
+	nodes := make(map[string]*NodeSpec)
 	if len(services) > 0 {
 		for _, spec := range services[0].Nodes {
-			nodes[spec.Id] = spec
+			nodes[spec.Id] = &NodeSpec{Node: spec}
 		}
 	}
 
@@ -219,14 +224,14 @@ func (m *Master) updateWorkerNodes() {
 	m.workerNodes = nodes
 }
 
-func diffWorkerNode(old, new map[string]*registry.Node) ([]string, []string, []string) {
+func diffWorkerNode(old, new map[string]*NodeSpec) ([]string, []string, []string) {
 	added := make([]string, 0)
 	deleted := make([]string, 0)
 	changed := make([]string, 0)
 
 	for k, v := range new {
 		if ov, ok := old[k]; ok {
-			if !reflect.DeepEqual(v, ov) {
+			if !reflect.DeepEqual(v.Node, ov.Node) {
 				changed = append(changed, k)
 			}
 		} else {
