@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	pb "github.com/dapings/examples/go-programing-tour-2023/crawler/protos/crawler"
+	"github.com/golang/protobuf/ptypes/empty"
 	"go-micro.dev/v4/registry"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
@@ -58,7 +60,7 @@ func decode(ds []byte) (*ResourceSpec, error) {
 func getNodeID(assigned string) (string, error) {
 	nodes := strings.Split(assigned, "|")
 	if len(nodes) < 2 {
-		return "", errors.New("assigned node format not collect")
+		return "", errors.New("assigned node format not incorrect")
 	}
 
 	return nodes[0], nil
@@ -85,7 +87,7 @@ func (m *Master) reAssign() {
 		}
 	}
 
-	m.AddResource(rs)
+	m.AddResources(rs)
 }
 
 func (m *Master) Assign(r *ResourceSpec) (*NodeSpec, error) {
@@ -123,40 +125,81 @@ func (m *Master) AddSeed() {
 		}
 	}
 
-	m.AddResource(rs)
+	m.AddResources(rs)
 }
 
-func (m *Master) AddResource(rs []*ResourceSpec) {
+func (m *Master) AddResources(rs []*ResourceSpec) {
 	for _, r := range rs {
-		r.ID = m.IDGen.Generate().String()
-		ns, err := m.Assign(r)
+		_, err := m.addResource(r)
 		if err != nil {
-			m.logger.Error("assign resource failed", zap.Error(err))
-
 			continue
 		}
-
-		if ns.Node == nil {
-			m.logger.Error("no node to assign")
-
-			continue
-		}
-
-		r.AssignedNode = ns.Node.Id + "|" + ns.Node.Address
-		r.CreateTime = time.Now().Local().UnixNano()
-
-		m.logger.Debug("add resource", zap.Any("specs", r))
-
-		_, err = m.etcdCli.Put(context.Background(), getResourcePath(r.Name), encode(r))
-		if err != nil {
-			m.logger.Error("put resource to etcd failed", zap.Error(err))
-
-			continue
-		}
-
-		m.resources[r.Name] = r
-		ns.Payload++
 	}
+}
+
+func (m *Master) AddResource(ctx context.Context, req *pb.ResourceSpec, resp *pb.NodeSpec) error {
+	nodeSpec, err := m.addResource(&ResourceSpec{Name: req.Name})
+	if nodeSpec != nil {
+		resp.Id = nodeSpec.Node.Id
+		resp.Address = nodeSpec.Node.Address
+	}
+
+	return err
+}
+
+func (m *Master) DelResource(ctx context.Context, spec *pb.ResourceSpec, empty *empty.Empty) error {
+	r, ok := m.resources[spec.Name]
+	if ok {
+		if _, err := m.etcdCli.Delete(context.Background(), getResourcePath(spec.Name)); err != nil {
+			return err
+		}
+	}
+
+	if r.AssignedNode != "" {
+		nodeID, err := getNodeID(r.AssignedNode)
+		if err != nil {
+			return err
+		}
+
+		if ns, ok := m.workerNodes[nodeID]; ok {
+			ns.Payload -= 1
+		}
+	}
+
+	return nil
+}
+
+func (m *Master) addResource(r *ResourceSpec) (*NodeSpec, error) {
+	r.ID = m.IDGen.Generate().String()
+	ns, err := m.Assign(r)
+	if err != nil {
+		m.logger.Error("assign resource failed", zap.Error(err))
+
+		return nil, err
+	}
+
+	if ns.Node == nil {
+		m.logger.Error("no node to assign")
+
+		return nil, err
+	}
+
+	r.AssignedNode = ns.Node.Id + "|" + ns.Node.Address
+	r.CreateTime = time.Now().Local().UnixNano()
+
+	m.logger.Debug("add resource", zap.Any("specs", r))
+
+	_, err = m.etcdCli.Put(context.Background(), getResourcePath(r.Name), encode(r))
+	if err != nil {
+		m.logger.Error("put resource to etcd failed", zap.Error(err))
+
+		return nil, err
+	}
+
+	m.resources[r.Name] = r
+	ns.Payload++
+
+	return ns, nil
 }
 
 func (m *Master) loadResource() error {
@@ -185,8 +228,9 @@ func (m *Master) loadResource() error {
 				continue
 			}
 
-			node := m.workerNodes[id]
-			node.Payload++
+			if node, ok := m.workerNodes[id]; ok {
+				node.Payload++
+			}
 		}
 	}
 
@@ -200,7 +244,7 @@ func (m *Master) HandleMsg() {
 	case msg := <-msgCh:
 		switch msg.Cmd {
 		case MsgAdd:
-			m.AddResource(msg.Specs)
+			m.AddResources(msg.Specs)
 		}
 	}
 }

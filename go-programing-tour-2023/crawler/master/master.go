@@ -70,7 +70,7 @@ func New(id string, opts ...Option) (*Master, error) {
 	go m.Campaign()
 	go m.HandleMsg()
 
-	return &Master{}, nil
+	return m, nil
 }
 
 func (m *Master) Campaign() {
