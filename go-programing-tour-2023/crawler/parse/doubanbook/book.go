@@ -109,7 +109,7 @@ func ParseBookList(ctx *spider.Context) (spider.ParseResult, error) {
 		result.Requests = append(result.Requests, req)
 	}
 	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
-	zap.S().Debugln("parse book list, request count:", len(result.Requests))
+	zap.S().Debugln("parse book list, request count:", len(result.Requests), "url:", ctx.Req.URL)
 	// result.Requests = result.Requests[:3]
 	return result, nil
 }
