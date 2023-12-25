@@ -130,6 +130,11 @@ func (m *Master) Campaign() {
 			m.logger.Info("watch worker change", zap.Any("worker:", resp))
 
 			m.updateWorkerNodes()
+			if err := m.loadResource(); err != nil {
+				m.logger.Error("load resource failed:%w", zap.Error(err))
+
+				// NOTE: 加载资源失败后，如何处理？是直接重新分配？
+			}
 			m.reAssign()
 		case <-time.After(20 * time.Second):
 			resp, err := e.Leader(context.Background())

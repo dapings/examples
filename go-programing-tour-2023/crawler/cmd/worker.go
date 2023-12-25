@@ -90,5 +90,5 @@ func RunWorker() {
 	go internal.RunHTTPServer(logger, *sconfig)
 
 	// start grpc server
-	internal.RunGRPCServer(logger, *sconfig, nil)
+	internal.RunGRPCServer(nil, logger, *sconfig, nil)
 }

@@ -71,6 +71,8 @@ func (m *Master) reAssign() {
 
 	for _, r := range m.resources {
 		if r.AssignedNode == "" {
+			rs = append(rs, r)
+
 			continue
 		}
 
@@ -90,7 +92,7 @@ func (m *Master) reAssign() {
 	m.AddResources(rs)
 }
 
-func (m *Master) Assign(r *ResourceSpec) (*NodeSpec, error) {
+func (m *Master) Assign(_ *ResourceSpec) (*NodeSpec, error) {
 	candidates := make([]*NodeSpec, 0, len(m.workerNodes))
 
 	for _, n := range m.workerNodes {
@@ -147,12 +149,14 @@ func (m *Master) AddResource(ctx context.Context, req *pb.ResourceSpec, resp *pb
 	return err
 }
 
-func (m *Master) DelResource(ctx context.Context, spec *pb.ResourceSpec, empty *empty.Empty) error {
+func (m *Master) DelResource(_ context.Context, spec *pb.ResourceSpec, _ *empty.Empty) error {
 	r, ok := m.resources[spec.Name]
-	if ok {
-		if _, err := m.etcdCli.Delete(context.Background(), getResourcePath(spec.Name)); err != nil {
-			return err
-		}
+	if !ok {
+		return errors.New("no such task")
+	}
+
+	if _, err := m.etcdCli.Delete(context.Background(), getResourcePath(spec.Name)); err != nil {
+		return err
 	}
 
 	if r.AssignedNode != "" {

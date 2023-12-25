@@ -101,7 +101,12 @@ func RunHTTPServer(logger *zap.Logger, cfg ServerConfig) {
 	// 指定要转发到那个gRPC服务器。
 	err := crawler.RegisterCrawlerMasterGwFromEndpoint(ctx, mux, cfg.GRPCListenAddr, opts)
 	if err != nil {
-		logger.Fatal("pb register gw from ep failed", zap.Error(err))
+		logger.Fatal("pb register gw backend from ep(grpc server endpoint) failed", zap.Error(err))
+	}
+
+	err = greeter.RegisterGreeterGwFromEndpoint(ctx, mux, cfg.GRPCListenAddr, opts)
+	if err != nil {
+		logger.Fatal("pb register gw backend from ep(grpc server endpoint) failed", zap.Error(err))
 	}
 
 	zap.S().Debugf("start http server listening on %v proxy to grpc server;%v", cfg.HTTPListenAddr, cfg.GRPCListenAddr)
