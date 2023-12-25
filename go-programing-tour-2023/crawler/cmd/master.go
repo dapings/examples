@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net/http"
+
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
@@ -22,18 +24,27 @@ var (
 		},
 	}
 
-	MasterHTTPListenAddr string
-	MasterGRPCListenAddr string
-	masterID             string
+	MasterHTTPListenAddr  string
+	MasterGRPCListenAddr  string
+	MasterPProfListenAddr string
+	masterID              string
 )
 
 func init() {
 	masterCmd.Flags().StringVar(&masterID, "id", "1", "set master id")
 	masterCmd.Flags().StringVar(&MasterHTTPListenAddr, "http_addr", ":8081", "set HTTP listen addr")
 	masterCmd.Flags().StringVar(&MasterGRPCListenAddr, "grpc_addr", ":9091", "set gRPC listen addr")
+	masterCmd.Flags().StringVar(&MasterPProfListenAddr, "pprof_addr", ":9081", "set pprof listen addr")
 }
 
 func RunMaster() {
+	// start pprof.
+	go func() {
+		if err := http.ListenAndServe(MasterPProfListenAddr, nil); err != nil {
+			panic(err)
+		}
+	}()
+
 	var (
 		cfg     config.Config
 		logger  *zap.Logger

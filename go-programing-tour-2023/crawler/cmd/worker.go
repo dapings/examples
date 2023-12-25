@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"net/http"
+
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
@@ -22,18 +24,27 @@ var (
 
 	WorkerServiceName = "go.micro.server.worker"
 
-	WorkerHTTPListenAddr string
-	WorkerGRPCListenAddr string
-	workerID             string
+	WorkerHTTPListenAddr  string
+	WorkerGRPCListenAddr  string
+	WorkerPProfListenAddr string
+	workerID              string
 )
 
 func init() {
 	workerCmd.Flags().StringVar(&workerID, "id", "1", "set worker id")
 	workerCmd.Flags().StringVar(&WorkerHTTPListenAddr, "http_addr", ":8080", "set HTTP listen addr")
 	workerCmd.Flags().StringVar(&WorkerGRPCListenAddr, "grpc_addr", ":9090", "set gRPC listen addr")
+	workerCmd.Flags().StringVar(&WorkerPProfListenAddr, "pprof_addr", ":9981", "set pprof listen addr")
 }
 
 func RunWorker() {
+	// start pprof.
+	go func() {
+		if err := http.ListenAndServe(WorkerPProfListenAddr, nil); err != nil {
+			panic(err)
+		}
+	}()
+
 	var (
 		cfg       config.Config
 		logger    *zap.Logger
