@@ -128,7 +128,7 @@ func ParseTaskConfig(logger *zap.Logger, f spider.Fetcher, s spider.Storage, cfg
 		if len(cfg.Limits) > 0 {
 			for _, limitCfg := range cfg.Limits {
 				// speed limiter 限速器，2秒1个，60秒20个
-				l := rate.NewLimiter(limiter.Per(limitCfg.EventCount, time.Duration(limitCfg.EventDur)*time.Second), 1)
+				l := rate.NewLimiter(limiter.Per(limitCfg.EventCount, time.Duration(limitCfg.EventDur)*time.Second), limitCfg.Bucket)
 				limits = append(limits, l)
 			}
 			multiLimiter := limiter.Multi(limits...)
@@ -162,16 +162,18 @@ func ConfigTasks(cfg config.Config, f spider.Fetcher, storager spider.Storage, l
 	return seeds, nil
 }
 
-func ConfigWorkerEngine(seeds []*spider.Task, f spider.Fetcher, logger *zap.Logger) (*engine.Crawler, error) {
-	s := engine.NewEngine(
+func ConfigWorkerEngine(sconfig *ServerConfig, seeds []*spider.Task, f spider.Fetcher, storager spider.Storage, logger *zap.Logger) (*engine.Crawler, error) {
+	s, err := engine.NewEngine(
 		engine.WithWorkCount(5),
 		engine.WithFetcher(f),
 		engine.WithLogger(logger),
 		engine.WithSeeds(seeds),
+		engine.WithRegistryURL(sconfig.RegistryAddr),
 		engine.WithScheduler(engine.NewSchedule()),
+		engine.WithStorage(storager),
 	)
 
-	return s, nil
+	return s, err
 }
 
 func ConfigMasterServer(cfg config.Config, logger *zap.Logger) (*ServerConfig, error) {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ var (
 	WorkerHTTPListenAddr  string
 	WorkerGRPCListenAddr  string
 	WorkerPProfListenAddr string
+	cluster               bool
 	workerID              string
 )
 
@@ -35,6 +37,7 @@ func init() {
 	workerCmd.Flags().StringVar(&WorkerHTTPListenAddr, "http_addr", ":8080", "set HTTP listen addr")
 	workerCmd.Flags().StringVar(&WorkerGRPCListenAddr, "grpc_addr", ":9090", "set gRPC listen addr")
 	workerCmd.Flags().StringVar(&WorkerPProfListenAddr, "pprof_addr", ":9981", "set pprof listen addr")
+	workerCmd.Flags().BoolVar(&cluster, "cluster", true, "run mode")
 }
 
 func RunWorker() {
@@ -54,8 +57,8 @@ func RunWorker() {
 		storager  spider.Storage
 		sconfig   *internal.ServerConfig
 		seeds     []*spider.Task
-		// s         *engine.Crawler
-		err error
+		s         *engine.Crawler
+		err       error
 	)
 
 	if cfg, err = internal.LoadConfig(); err != nil {
@@ -81,11 +84,11 @@ func RunWorker() {
 		panic(err)
 	}
 
-	if _, err = internal.ConfigWorkerEngine(seeds, fetcher, logger); err != nil {
+	if sconfig, err = internal.ConfigWorkerServer(cfg, logger); err != nil {
 		panic(err)
 	}
 
-	if sconfig, err = internal.ConfigWorkerServer(cfg, logger); err != nil {
+	if _, err = internal.ConfigWorkerEngine(sconfig, seeds, fetcher, storager, logger); err != nil {
 		panic(err)
 	}
 
@@ -95,7 +98,8 @@ func RunWorker() {
 	WorkerServiceName = sconfig.Name
 
 	// worker start
-	// go s.Run()
+	id := sconfig.Name + "-" + workerID
+	go s.Run(id, cluster)
 
 	// start http proxy to gRPC
 	go internal.RunHTTPServer(logger, *sconfig)
