@@ -11,6 +11,7 @@ import (
 
 	pb "github.com/dapings/examples/go-programing-tour-2023/crawler/protos/crawler"
 	"github.com/golang/protobuf/ptypes/empty"
+	"go-micro.dev/v4/client"
 	"go-micro.dev/v4/registry"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
@@ -140,6 +141,18 @@ func (m *Master) AddResources(rs []*ResourceSpec) {
 }
 
 func (m *Master) AddResource(ctx context.Context, req *pb.ResourceSpec, resp *pb.NodeSpec) error {
+	if !m.IsLeader() && m.leaderID != "" && m.leaderID != m.ID {
+		// 当前已不再是leader，转发到 leader 上。
+		addr := getLeaderAddr(m.leaderID)
+		nodeSpec, err := m.forwardCli.AddResource(ctx, req, client.WithAddress(addr))
+		if nodeSpec != nil {
+			resp.Id = nodeSpec.Id
+			resp.Address = nodeSpec.Address
+		}
+
+		return err
+	}
+
 	nodeSpec, err := m.addResource(&ResourceSpec{Name: req.Name})
 	if nodeSpec != nil {
 		resp.Id = nodeSpec.Node.Id

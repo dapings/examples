@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/bwmarrin/snowflake"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/protos/crawler"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd"
 	"go-micro.dev/v4/registry"
@@ -26,6 +28,7 @@ type Master struct {
 	resources   map[string]*ResourceSpec
 	IDGen       *snowflake.Node
 	etcdCli     *clientv3.Client
+	forwardCli  crawler.CrawlerMasterService
 	options
 }
 
@@ -99,6 +102,8 @@ func (m *Master) Campaign() {
 	select {
 	case resp := <-leaderChange:
 		m.logger.Info("watch leader change", zap.String("leader:", string(resp.Kvs[0].Value)))
+
+		m.leaderID = string(resp.Kvs[0].Value)
 	}
 
 	workerNodeChange := m.WatcherWorker()
@@ -125,6 +130,12 @@ func (m *Master) Campaign() {
 		case resp := <-leaderChange:
 			if len(resp.Kvs) > 0 {
 				m.logger.Info("watch leader change", zap.String("leader:", string(resp.Kvs[0].Value)))
+
+				m.leaderID = string(resp.Kvs[0].Value)
+				if m.ID != m.leaderID {
+					// 当前已不再是 leader。
+					atomic.StoreInt32(&m.ready, 0)
+				}
 			}
 		case resp := <-workerNodeChange:
 			m.logger.Info("watch worker change", zap.Any("worker:", resp))
@@ -150,7 +161,8 @@ func (m *Master) Campaign() {
 			if resp != nil && len(resp.Kvs) > 0 {
 				m.logger.Info("get leader", zap.String("value", string(resp.Kvs[0].Value)))
 
-				if m.IsLeader() && m.ID != string(resp.Kvs[0].Value) {
+				m.leaderID = string(resp.Kvs[0].Value)
+				if m.IsLeader() && m.ID != m.leaderID {
 					// 当前已不再是 leader
 					atomic.StoreInt32(&m.ready, 0)
 				}
@@ -208,6 +220,10 @@ func (m *Master) WatcherWorker() chan *registry.Result {
 	return ch
 }
 
+func (m *Master) SetForwardCli(forwardCli crawler.CrawlerMasterService) {
+	m.forwardCli = forwardCli
+}
+
 func (m *Master) updateWorkerNodes() {
 	services, err := m.registry.GetService(cmd.WorkerServiceName)
 	if err != nil {
@@ -251,6 +267,15 @@ func diffWorkerNode(old, new map[string]*NodeSpec) ([]string, []string, []string
 	}
 
 	return added, deleted, changed
+}
+
+func getLeaderAddr(addr string) string {
+	s := strings.Split(addr, "-")
+	if len(s) < 2 {
+		return ""
+	}
+
+	return s[1]
 }
 
 func genMasterID(id, ipv4, gRPCAddr string) string {

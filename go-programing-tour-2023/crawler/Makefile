@@ -20,7 +20,6 @@ build:
 debug:
 	go build -gcflags=all="-N -l" -ldflags '$(LDFLAGS)' $(BUILD_FLAGS) main.go
 
-
 lint:
 	golangci-lint run ./...
 

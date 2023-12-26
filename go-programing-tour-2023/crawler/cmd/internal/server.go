@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/log"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/protos/crawler"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/protos/greeter"
+	grpccli "github.com/go-micro/plugins/v4/client/grpc"
 	etcdReg "github.com/go-micro/plugins/v4/registry/etcd"
 	gs "github.com/go-micro/plugins/v4/server/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -39,7 +41,7 @@ type ServerConfig struct {
 	ClientTimeOut    int
 }
 
-func RunGRPCServer(hdlr crawler.CrawlerMasterHandler, logger *zap.Logger, cfg ServerConfig, reg registry.Registry) {
+func RunGRPCServer(hdlr *master.Master, logger *zap.Logger, cfg ServerConfig, reg registry.Registry) {
 	// start grpc server
 	if reg == nil {
 		// option模式注入注册中心etcd的地址。
@@ -56,6 +58,7 @@ func RunGRPCServer(hdlr crawler.CrawlerMasterHandler, logger *zap.Logger, cfg Se
 		micro.WrapHandler(log.MicroServerWrapper(logger)),
 		micro.RegisterTTL(time.Duration(cfg.RegisterTTL)*time.Second),
 		micro.RegisterInterval(time.Duration(cfg.RegisterInterval)*time.Second),
+		micro.Client(grpccli.NewClient()),
 	)
 
 	// 设置micro客户端默认超时时间为10秒
@@ -70,6 +73,7 @@ func RunGRPCServer(hdlr crawler.CrawlerMasterHandler, logger *zap.Logger, cfg Se
 	// register handler
 	var err error
 	if hdlr != nil {
+		hdlr.SetForwardCli(crawler.NewCrawlerMasterService(cfg.Name, service.Client()))
 		err = crawler.RegisterCrawlerMasterHandler(service.Server(), hdlr)
 	} else {
 		// default greeter.
