@@ -86,7 +86,7 @@ func ParseTag(ctx *spider.Context) (spider.ParseResult, error) {
 				RuleName: "书籍列表",
 			})
 	}
-	zap.S().Debugln("parse book tag, request count:", len(result.Requests))
+	zap.S().Debugln("parse book tag, request count:", len(result.Requests), "url:", ctx.Req.URL)
 	// 在Task Options 中设置多个 limiter
 	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
 	// result.Requests = result.Requests[:1]

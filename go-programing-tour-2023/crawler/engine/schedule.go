@@ -55,6 +55,18 @@ func (s *Schedule) Schedule() {
 			ch = s.workerChan
 		}
 
+		// 请求校验
+		if req != nil {
+			if err := req.Check(); err != nil {
+				s.Logger.Debug("request check failed", zap.Error(err))
+
+				req = nil
+				ch = nil
+
+				continue
+			}
+		}
+
 		select {
 		case r := <-s.reqChan:
 			if r.Priority > 0 {

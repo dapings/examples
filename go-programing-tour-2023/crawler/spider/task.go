@@ -35,6 +35,7 @@ type (
 		Visited     map[string]bool
 		VisitedLock sync.Mutex
 		Rule        RuleTree
+		Closed      bool
 		Options
 	}
 )

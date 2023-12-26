@@ -40,7 +40,7 @@ func (e *Crawler) handleSeeds() {
 }
 
 func (e *Crawler) watchResource() {
-	watch := e.etcdCli.Watch(context.Background(), master.ResourcePath, clientv3.WithPrefix())
+	watch := e.etcdCli.Watch(context.Background(), master.ResourcePath, clientv3.WithPrefix(), clientv3.WithPrevKV())
 	for w := range watch {
 		if w.Err() != nil {
 			e.Logger.Error("watch resource failed", zap.Error(w.Err()))
@@ -55,15 +55,15 @@ func (e *Crawler) watchResource() {
 		}
 
 		for _, ev := range w.Events {
-			spec, err := master.Decode(ev.Kv.Value)
-			if err != nil {
-				e.Logger.Error("decode etcd value failed", zap.Error(err))
-
-				continue
-			}
-
 			switch ev.Type {
 			case clientv3.EventTypePut:
+				spec, err := master.Decode(ev.Kv.Value)
+				if err != nil {
+					e.Logger.Error("decode etcd value failed", zap.Error(err))
+
+					continue
+				}
+
 				if ev.IsCreate() {
 					e.Logger.Info("receive create resource", zap.Any("spec", spec))
 				}
@@ -72,9 +72,22 @@ func (e *Crawler) watchResource() {
 					e.Logger.Info("receive update resource", zap.Any("spec", spec))
 				}
 
+				e.rlock.Lock()
 				e.runTasks(spec.Name)
+				e.rlock.Unlock()
 			case clientv3.EventTypeDelete:
+				spec, err := master.Decode(ev.Kv.Value)
+				if err != nil {
+					e.Logger.Error("decode etcd value failed", zap.Error(err))
+
+					continue
+				}
+
 				e.Logger.Info("receive delete resource", zap.Any("spec", spec))
+
+				e.rlock.Lock()
+				e.deleteTasks(spec.Name)
+				e.rlock.Unlock()
 			}
 		}
 	}
@@ -104,7 +117,7 @@ func (e *Crawler) loadResource() error {
 
 	e.resources = rs
 
-	for _, r := range e.resources {
+	for _, r := range rs {
 		e.runTasks(r.Name)
 	}
 
@@ -112,12 +125,20 @@ func (e *Crawler) loadResource() error {
 }
 
 func (e *Crawler) runTasks(taskName string) {
+	if _, ok := e.resources[taskName]; ok {
+		e.Logger.Info("task has running", zap.String("task name", taskName))
+
+		return
+	}
+
 	t, ok := Store.Hash[taskName]
 	if !ok {
 		e.Logger.Error("not found preset tasks", zap.String("task name", taskName))
 
 		return
 	}
+
+	t.Closed = false
 
 	reqs, err := t.Rule.Root()
 	if err != nil {
@@ -131,6 +152,19 @@ func (e *Crawler) runTasks(taskName string) {
 	}
 
 	e.scheduler.Push(reqs...)
+}
+
+func (e *Crawler) deleteTasks(taskName string) {
+	t, ok := Store.Hash[taskName]
+	if !ok {
+		e.Logger.Error("not found preset tasks", zap.String("task name", taskName))
+
+		return
+	}
+
+	t.Closed = true
+
+	delete(e.resources, taskName)
 }
 
 func getID(assignedNode string) string {

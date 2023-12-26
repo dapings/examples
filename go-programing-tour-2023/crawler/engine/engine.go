@@ -78,7 +78,7 @@ func (e *Crawler) Run(id string, cluster bool) {
 }
 
 func (e *Crawler) Schedule() {
-	go e.scheduler.Schedule()
+	e.scheduler.Schedule()
 }
 
 func (e *Crawler) CreateWork() {
