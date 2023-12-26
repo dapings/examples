@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/engine"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/generator"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/proxy"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/spf13/cobra"
@@ -29,11 +33,14 @@ var (
 	WorkerGRPCListenAddr  string
 	WorkerPProfListenAddr string
 	cluster               bool
+	workerPodIP           string
 	workerID              string
 )
 
 func init() {
-	workerCmd.Flags().StringVar(&workerID, "id", "1", "set worker id")
+	workerCmd.Flags().StringVar(&cfgFile, "config", "config.toml", "set config file")
+	workerCmd.Flags().StringVar(&workerID, "id", "", "set worker id")
+	workerCmd.Flags().StringVar(&workerPodIP, "podIP", "", "set worker pod ip")
 	workerCmd.Flags().StringVar(&WorkerHTTPListenAddr, "http_addr", ":8080", "set HTTP listen addr")
 	workerCmd.Flags().StringVar(&WorkerGRPCListenAddr, "grpc_addr", ":9090", "set gRPC listen addr")
 	workerCmd.Flags().StringVar(&WorkerPProfListenAddr, "pprof_addr", ":9981", "set pprof listen addr")
@@ -61,13 +68,15 @@ func RunWorker() {
 		err       error
 	)
 
-	if cfg, err = internal.LoadConfig(); err != nil {
+	if cfg, err = internal.LoadConfig(cfgFile); err != nil {
 		panic(err)
 	}
 
 	if logger, err = internal.ConfigLogger(cfg); err != nil {
 		panic(err)
 	}
+
+	logger.Named("worker")
 
 	if proxyFunc, timeout, err = internal.ConfigProxyFunc(cfg, logger); err != nil {
 		panic(err)
@@ -92,6 +101,14 @@ func RunWorker() {
 		panic(err)
 	}
 
+	if workerID == "" {
+		workerID = fmt.Sprintf("%d", time.Now().Local().UnixNano())
+
+		if workerPodIP != "" {
+			workerID = strconv.Itoa(int(generator.IDByIP(workerPodIP)))
+		}
+	}
+
 	sconfig.ID = workerID
 	sconfig.HTTPListenAddr = WorkerHTTPListenAddr
 	sconfig.GRPCListenAddr = WorkerGRPCListenAddr
@@ -99,6 +116,7 @@ func RunWorker() {
 
 	// worker start
 	id := sconfig.Name + "-" + workerID
+	logger.Debug("worker id", zap.String("id", id))
 	go s.Run(id, cluster)
 
 	// start http proxy to gRPC

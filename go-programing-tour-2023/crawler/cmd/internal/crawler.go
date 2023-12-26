@@ -23,7 +23,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func LoadConfig() (config.Config, error) {
+func LoadConfig(cfgFile string) (config.Config, error) {
 	// load config
 	enc := toml.NewEncoder()
 	cfg, cfgErr := config.NewConfig(config.WithReader(json.NewReader(reader.WithEncoder(enc))))
@@ -31,7 +31,7 @@ func LoadConfig() (config.Config, error) {
 		return nil, cfgErr
 	}
 
-	err := cfg.Load(file.NewSource(file.WithPath("config.toml"), source.WithEncoder(enc)))
+	err := cfg.Load(file.NewSource(file.WithPath(cfgFile), source.WithEncoder(enc)))
 	if err != nil {
 		return nil, err
 	}

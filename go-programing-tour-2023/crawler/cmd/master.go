@@ -1,9 +1,13 @@
 package cmd
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/cmd/internal"
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/generator"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/master"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"github.com/go-micro/plugins/v4/registry/etcd"
@@ -27,11 +31,15 @@ var (
 	MasterHTTPListenAddr  string
 	MasterGRPCListenAddr  string
 	MasterPProfListenAddr string
+	cfgFile               string
+	masterPodIP           string
 	masterID              string
 )
 
 func init() {
-	masterCmd.Flags().StringVar(&masterID, "id", "1", "set master id")
+	masterCmd.Flags().StringVar(&cfgFile, "config", "config.toml", "set config file")
+	masterCmd.Flags().StringVar(&masterID, "id", "", "set master id")
+	masterCmd.Flags().StringVar(&masterPodIP, "podIP", "", "set master pod ip")
 	masterCmd.Flags().StringVar(&MasterHTTPListenAddr, "http_addr", ":8081", "set HTTP listen addr")
 	masterCmd.Flags().StringVar(&MasterGRPCListenAddr, "grpc_addr", ":9091", "set gRPC listen addr")
 	masterCmd.Flags().StringVar(&MasterPProfListenAddr, "pprof_addr", ":9081", "set pprof listen addr")
@@ -54,7 +62,7 @@ func RunMaster() {
 		err     error
 	)
 
-	if cfg, err = internal.LoadConfig(); err != nil {
+	if cfg, err = internal.LoadConfig(cfgFile); err != nil {
 		panic(err)
 	}
 
@@ -62,12 +70,22 @@ func RunMaster() {
 		panic(err)
 	}
 
+	logger.Named("master")
+
 	if seeds, err = internal.ConfigTasks(cfg, nil, nil, logger); err != nil {
 		panic(err)
 	}
 
 	if sconfig, err = internal.ConfigMasterServer(cfg, logger); err != nil {
 		panic(err)
+	}
+
+	if masterID == "" {
+		masterID = fmt.Sprintf("%d", time.Now().Local().UnixNano())
+
+		if masterPodIP != "" {
+			masterID = strconv.Itoa(int(generator.IDByIP(masterPodIP)))
+		}
 	}
 
 	reg := etcd.NewRegistry(registry.Addrs(sconfig.RegistryAddr))
