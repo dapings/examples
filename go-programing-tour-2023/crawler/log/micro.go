@@ -15,6 +15,7 @@ func MicroServerWrapper(logger *zap.Logger) server.HandlerWrapper {
 			logger.Info("receive request",
 				zap.String("method", req.Method()),
 				zap.String("Service", req.Service()),
+				zap.String("Endpoint", req.Endpoint()),
 				zap.Reflect("request param:", req.Body()),
 			)
 

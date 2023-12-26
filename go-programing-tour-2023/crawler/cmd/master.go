@@ -93,5 +93,5 @@ func RunMaster() {
 	go internal.RunHTTPServer(logger, *sconfig)
 
 	// start grpc server
-	internal.RunGRPCServer(m, logger, *sconfig, reg)
+	internal.RunGRPCServerForMaster(m, logger, *sconfig, reg)
 }
