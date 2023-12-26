@@ -7,6 +7,7 @@ import (
 	"net"
 	"reflect"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -29,6 +30,8 @@ type Master struct {
 	IDGen       *snowflake.Node
 	etcdCli     *clientv3.Client
 	forwardCli  crawler.CrawlerMasterService
+	rlock       sync.Mutex
+
 	options
 }
 
@@ -71,7 +74,7 @@ func New(id string, opts ...Option) (*Master, error) {
 	m.AddSeed()
 
 	go m.Campaign()
-	go m.HandleMsg()
+	// go m.HandleMsg()
 
 	return m, nil
 }
@@ -231,6 +234,9 @@ func (m *Master) updateWorkerNodes() {
 
 		return
 	}
+
+	m.rlock.Lock()
+	defer m.rlock.Unlock()
 
 	nodes := make(map[string]*NodeSpec)
 	if len(services) > 0 {

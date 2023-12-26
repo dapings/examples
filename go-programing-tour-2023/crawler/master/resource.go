@@ -20,8 +20,8 @@ import (
 const (
 	ResourcePath = "/resources"
 
-	MsgAdd Command = iota
-	MSG_DEL
+	ResourceAdd = iota
+	ResourceDel
 )
 
 type Command int
@@ -52,7 +52,7 @@ func encode(spec *ResourceSpec) string {
 	return string(b)
 }
 
-func decode(ds []byte) (*ResourceSpec, error) {
+func Decode(ds []byte) (*ResourceSpec, error) {
 	var s *ResourceSpec
 	err := json.Unmarshal(ds, &s)
 	return s, err
@@ -69,6 +69,9 @@ func getNodeID(assigned string) (string, error) {
 
 func (m *Master) reAssign() {
 	rs := make([]*ResourceSpec, 0, len(m.resources))
+
+	m.rlock.Lock()
+	defer m.rlock.Unlock()
 
 	for _, r := range m.resources {
 		if r.AssignedNode == "" {
@@ -135,6 +138,8 @@ func (m *Master) AddResources(rs []*ResourceSpec) {
 	for _, r := range rs {
 		_, err := m.addResource(r)
 		if err != nil {
+			m.logger.Error("add resource failed", zap.String("name:", r.Name), zap.Error(err))
+
 			continue
 		}
 	}
@@ -153,6 +158,9 @@ func (m *Master) AddResource(ctx context.Context, req *pb.ResourceSpec, resp *pb
 		return err
 	}
 
+	m.rlock.Lock()
+	defer m.rlock.Unlock()
+
 	nodeSpec, err := m.addResource(&ResourceSpec{Name: req.Name})
 	if nodeSpec != nil {
 		resp.Id = nodeSpec.Node.Id
@@ -162,7 +170,17 @@ func (m *Master) AddResource(ctx context.Context, req *pb.ResourceSpec, resp *pb
 	return err
 }
 
-func (m *Master) DelResource(_ context.Context, spec *pb.ResourceSpec, _ *empty.Empty) error {
+func (m *Master) DelResource(ctx context.Context, spec *pb.ResourceSpec, _ *empty.Empty) error {
+	if !m.IsLeader() && m.leaderID != "" && m.leaderID != m.ID {
+		// 当前已不再是leader，转发到 leader 上。
+		addr := getLeaderAddr(m.leaderID)
+		_, err := m.forwardCli.DelResource(ctx, spec, client.WithAddress(addr))
+		return err
+	}
+
+	m.rlock.Lock()
+	defer m.rlock.Unlock()
+
 	r, ok := m.resources[spec.Name]
 	if !ok {
 		return errors.New("no such task")
@@ -171,6 +189,8 @@ func (m *Master) DelResource(_ context.Context, spec *pb.ResourceSpec, _ *empty.
 	if _, err := m.etcdCli.Delete(context.Background(), getResourcePath(spec.Name)); err != nil {
 		return err
 	}
+
+	delete(m.resources, spec.Name)
 
 	if r.AssignedNode != "" {
 		nodeID, err := getNodeID(r.AssignedNode)
@@ -227,13 +247,17 @@ func (m *Master) loadResource() error {
 
 	rs := make(map[string]*ResourceSpec)
 	for _, kv := range resp.Kvs {
-		r, err := decode(kv.Value)
+		r, err := Decode(kv.Value)
 		if err == nil && r != nil {
 			rs[r.Name] = r
 		}
 	}
 
 	m.logger.Info("leader init load resource", zap.Int("length", len(m.resources)))
+
+	m.rlock.Lock()
+	defer m.rlock.Unlock()
+
 	m.resources = rs
 
 	for _, r := range m.resources {
@@ -252,16 +276,4 @@ func (m *Master) loadResource() error {
 	}
 
 	return nil
-}
-
-func (m *Master) HandleMsg() {
-	msgCh := make(chan *Message)
-
-	select {
-	case msg := <-msgCh:
-		switch msg.Cmd {
-		case MsgAdd:
-			m.AddResources(msg.Specs)
-		}
-	}
 }
