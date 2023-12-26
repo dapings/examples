@@ -3,9 +3,12 @@ package doubanbook
 import (
 	"regexp"
 	"strconv"
+	"time"
 
+	"github.com/dapings/examples/go-programing-tour-2023/crawler/limiter"
 	"github.com/dapings/examples/go-programing-tour-2023/crawler/spider"
 	"go.uber.org/zap"
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -29,7 +32,13 @@ var (
 )
 
 var DoubanBookTask = &spider.Task{
-	Options: spider.Options{Name: BookListTaskName},
+	Options: spider.Options{
+		Name: BookListTaskName, Reload: true, WaitTime: 2, MaxDepth: 5, Cookie: cookie,
+		Limit: limiter.Multi(
+			rate.NewLimiter(limiter.Per(1, 3*time.Second), 1),
+			rate.NewLimiter(limiter.Per(20, 60*time.Second), 20),
+		),
+	},
 	Rule: spider.RuleTree{
 		Root: func() ([]*spider.Request, error) {
 			roots := []*spider.Request{
@@ -77,8 +86,9 @@ func ParseTag(ctx *spider.Context) (spider.ParseResult, error) {
 				RuleName: "书籍列表",
 			})
 	}
-	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
 	zap.S().Debugln("parse book tag, request count:", len(result.Requests))
+	// 在Task Options 中设置多个 limiter
+	// 在添加limit之前，临时减少抓取数量,防止被服务器封禁
 	// result.Requests = result.Requests[:1]
 	return result, nil
 }
