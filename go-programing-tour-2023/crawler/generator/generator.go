@@ -6,7 +6,7 @@ import (
 	"net"
 )
 
-func IDByIP(ip string) uint32 {
+func GetIDByIP(ip string) uint32 {
 	var id uint32
 	err := binary.Read(bytes.NewBuffer(net.ParseIP(ip).To4()), binary.BigEndian, &id)
 	if err != nil {

@@ -105,7 +105,7 @@ func RunWorker() {
 		workerID = fmt.Sprintf("%d", time.Now().Local().UnixNano())
 
 		if workerPodIP != "" {
-			workerID = strconv.Itoa(int(generator.IDByIP(workerPodIP)))
+			workerID = strconv.Itoa(int(generator.GetIDByIP(workerPodIP)))
 		}
 	}
 

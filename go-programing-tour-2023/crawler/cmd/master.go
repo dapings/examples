@@ -84,7 +84,7 @@ func RunMaster() {
 		masterID = fmt.Sprintf("%d", time.Now().Local().UnixNano())
 
 		if masterPodIP != "" {
-			masterID = strconv.Itoa(int(generator.IDByIP(masterPodIP)))
+			masterID = strconv.Itoa(int(generator.GetIDByIP(masterPodIP)))
 		}
 	}
 
