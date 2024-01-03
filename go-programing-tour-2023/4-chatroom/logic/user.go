@@ -27,12 +27,14 @@ var (
 )
 
 type User struct {
-	UID            int           `json:"uid"`
-	NickName       string        `json:"nickname"`
-	EnterAt        time.Time     `json:"enter_at"`
-	Addr           string        `json:"addr"`
-	MessageChannel chan *Message `json:"-"`
-	Token          string        `json:"token"`
+	UID      int       `json:"uid"`
+	NickName string    `json:"nickname"`
+	EnterAt  time.Time `json:"enter_at"`
+	Addr     string    `json:"addr"`
+	// 对外完全隐藏chan，调用方不知道chan的存在，只是做普通的方法调用
+	// 全部由内部处理，保证了安全性。
+	messageChannel chan *Message
+	Token          string `json:"token"`
 
 	conn *websocket.Conn
 
@@ -44,7 +46,7 @@ func NewUser(conn *websocket.Conn, token, nickname, addr string) *User {
 		NickName:       nickname,
 		EnterAt:        time.Now().Local(),
 		Addr:           addr,
-		MessageChannel: make(chan *Message, 32),
+		messageChannel: make(chan *Message, 32),
 		Token:          token,
 
 		conn: conn,
@@ -67,7 +69,7 @@ func NewUser(conn *websocket.Conn, token, nickname, addr string) *User {
 }
 
 func (u *User) SendMessage(ctx context.Context) {
-	for msg := range u.MessageChannel {
+	for msg := range u.messageChannel {
 		_ = wsjson.Write(ctx, u.conn, msg)
 	}
 }
@@ -104,9 +106,13 @@ func (u *User) ReceiveMessage(ctx context.Context) error {
 	}
 }
 
+func (u *User) MessageChannel(msg *Message) {
+	u.messageChannel <- msg
+}
+
 // CloseMessageChannel 避免G泄漏导致的内存泄漏。
 func (u *User) CloseMessageChannel() {
-	close(u.MessageChannel)
+	close(u.messageChannel)
 }
 
 func genToken(uid int, nickname string) string {

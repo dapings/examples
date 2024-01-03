@@ -74,7 +74,7 @@ func (b *broadcaster) Start() {
 					continue
 				}
 
-				user.MessageChannel <- msg
+				user.MessageChannel(msg)
 			}
 
 			OfflineProcessor.Save(msg)
