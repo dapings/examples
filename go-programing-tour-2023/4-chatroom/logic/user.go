@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -92,14 +93,18 @@ func (u *User) ReceiveMessage(ctx context.Context) error {
 		}
 
 		// 内容发送到聊天室
-		// sendMsg :=
+		sendMsg := NewMessage(u, receiveMsg["content"], receiveMsg["send_time"])
+		sendMsg.Content = FilterSensitive(sendMsg.Content)
 
 		// 解析 content，看看@谁了
+		reg := regexp.MustCompile(`@[^\s@]{2,20}`)
+		sendMsg.Ats = reg.FindAllString(sendMsg.Content, -1)
 
+		Broadcaster.Broadcast(sendMsg)
 	}
 }
 
-// CloseMessageChannel 避免G泄漏。
+// CloseMessageChannel 避免G泄漏导致的内存泄漏。
 func (u *User) CloseMessageChannel() {
 	close(u.MessageChannel)
 }
