@@ -56,6 +56,7 @@ type broadcaster struct {
 // 需要在一个新G中运行，因为它不会返回
 // 最佳实践(没有在自己内部开启新的G)：应该让调用者决定并发(启动新的G)，这样它清楚自己在干什么。
 func (b *broadcaster) Start() {
+	// 负责循环接收各个channel发送的数据，根据不同的channel处理不同的业务逻辑。
 	for {
 		select {
 		case user := <-b.enteringChannel:
@@ -93,6 +94,10 @@ func (b *broadcaster) Start() {
 			b.usersChannel <- userList
 		}
 	}
+}
+
+func (b *broadcaster) Entering() chan<- *User {
+	return b.enteringChannel
 }
 
 func (b *broadcaster) UserEntering(u *User) {

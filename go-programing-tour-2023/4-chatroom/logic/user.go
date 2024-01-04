@@ -69,6 +69,7 @@ func NewUser(conn *websocket.Conn, token, nickname, addr string) *User {
 }
 
 func (u *User) SendMessage(ctx context.Context) {
+	// 可能导致G泄漏，直到channel关闭，for-range才会结束，因此需要有地方调用close channel。
 	for msg := range u.messageChannel {
 		_ = wsjson.Write(ctx, u.conn, msg)
 	}
