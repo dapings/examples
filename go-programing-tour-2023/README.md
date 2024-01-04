@@ -474,6 +474,15 @@
    - 常见问题讨论
 
 4. chatroom IM聊天室
+
+   - 聊天室需求分析和设计
+   - 核心流程
+   - 广播器
+   - @提醒功能
+   - 敏感词处理
+   - 离线消息处理
+   - 关键性能分析和优化
+
 5. cache-example 进程内缓存
 
 ## [go-micro](https://github.com/asim/go-micro) a Go microservices framework
