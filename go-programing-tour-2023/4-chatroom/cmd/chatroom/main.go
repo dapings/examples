@@ -18,7 +18,7 @@ var (
    |    |    | /----\   |
    |____|    |/      \  |
 
- —— 一起用Go做项目：ChatRoom，start on：%s
+ —— ChatRoom，start on：%s
 
 `
 )
