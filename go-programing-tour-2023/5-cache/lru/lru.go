@@ -6,6 +6,8 @@ import (
 	cache "github.com/dapings/examples/go-programing-tour-2023/5-cache"
 )
 
+// container/list.List is a doubly linked list. The zero value for List is an empty list ready to use.
+
 // lru 是一个LRU cache，不是并发安全的。
 type lru struct {
 	// 缓存最大的容量，单位字节；
