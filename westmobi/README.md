@@ -32,7 +32,7 @@
 
 ## 优化
 
-### 前期少、后期逐渐增多
+### 泊松到达：前期少、后期逐渐增多
 
 加上*泊松到达分布*，并把实时监控改成输出并发数时间序列 CSV 方便画图。
 
@@ -54,7 +54,7 @@
   └── 后900人 → 只安装不注册
 ```
 
-- 用 rand.Shuffle 打乱用户 ID，保证选中的用户是随机的
-- 三个 map[int]struct{} 存储身份集合，运行时只读、无需加锁
-- simulateUser 中用 if _, ok := registerSet[userID]; !ok { return } 代替概率判断
+- 用 `rand.Shuffle` 打乱用户 ID，保证选中的用户是随机的
+- 三个 `map[int]struct{}` 存储身份集合，运行时只读、无需加锁
+- simulateUser 中用 `if _, ok := registerSet[userID]; !ok { return }` 代替概率判断
 - 前提：安装成功率必须为 100%，否则被选中的用户可能安装失败，导致实际人数不足（代码中已设 InstallRate = 1.00）
