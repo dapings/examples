@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"fmt"
 	"math"
@@ -26,6 +27,12 @@ const (
 	MaxConcurrent = 100 // 最大同时安装并发数，真实服务器有承载上限，用带缓冲 channel 做并发闸门，超过 100 个安装请求会排队等待，避免瞬时打爆下游
 
 	CSVFile = "concurrency_timeseries.csv" // 输出的时间序列CSV
+
+	// 精确目标数（不再是概率，而是保证达到的人数）
+
+	TargetRegister = 100
+	TargetLogin    = 50
+	TargetRecharge = 30
 )
 
 // ========== 全局统计 ==========
@@ -58,6 +65,11 @@ type Snapshot struct {
 var (
 	snapshots  []Snapshot
 	snapshotMu sync.Mutex
+
+	// 预分配身份集合：启动前确定哪些用户会注册/登录/充值，运行时只读
+	registerSet map[int]struct{}
+	loginSet    map[int]struct{}
+	rechargeSet map[int]struct{}
 )
 
 // randomDuration 返回 [min, max) 之间的随机时长
@@ -102,6 +114,35 @@ func generatePoissonArrivals(n int, window time.Duration) []time.Duration {
 	return arrivals
 }
 
+// assignTargets 精确分配注册/登录/充值用户
+// 打乱所有用户ID → 前TargetRegister个会注册
+//
+//	→ 其中前TargetLogin个会登录
+//	→ 其中前TargetRecharge个会充值
+func assignTargets(total, regCnt, loginCnt, rechargeCnt int) {
+	ids := make([]int, total)
+	for i := range ids {
+		ids[i] = i
+	}
+	rand.Shuffle(len(ids), func(i, j int) {
+		ids[i], ids[j] = ids[j], ids[i]
+	})
+
+	registerSet = make(map[int]struct{}, regCnt)
+	loginSet = make(map[int]struct{}, loginCnt)
+	rechargeSet = make(map[int]struct{}, rechargeCnt)
+
+	for i := 0; i < regCnt; i++ {
+		registerSet[ids[i]] = struct{}{}
+		if i < loginCnt {
+			loginSet[ids[i]] = struct{}{}
+		}
+		if i < rechargeCnt {
+			rechargeSet[ids[i]] = struct{}{}
+		}
+	}
+}
+
 // simulateUser 模拟单个用户从到达 → 安装 → 注册 → 登录 → 充值
 func simulateUser(userID int, arrival time.Duration, wg *sync.WaitGroup, sem chan struct{}) {
 	defer wg.Done()
@@ -109,7 +150,7 @@ func simulateUser(userID int, arrival time.Duration, wg *sync.WaitGroup, sem cha
 	// 等待到达时间
 	time.Sleep(arrival)
 
-	// ★ 到达计数：记录该用户在这一秒到达
+	// 到达计数：记录该用户在这一秒到达
 	atomic.AddInt64(&stats.arrivalsThisSec, 1)
 
 	// ──── 第一步：安装（受并发信号量控制）────
@@ -130,32 +171,62 @@ func simulateUser(userID int, arrival time.Duration, wg *sync.WaitGroup, sem cha
 	atomic.AddInt64(&stats.installSuccess, 1)
 
 	// ──── 第二步：安装成功后随机延迟，再决定是否注册 ────
-	time.Sleep(randomDuration(5*time.Second, 30*time.Second))
-	if rand.Float64() > RegisterRate {
-		return
+	if _, ok := registerSet[userID]; !ok {
+		return // 不在注册名单中，结束
 	}
+	time.Sleep(randomDuration(5*time.Second, 30*time.Second))
 	atomic.AddInt64(&stats.register, 1)
 	time.Sleep(randomDuration(500*time.Millisecond, 2*time.Second)) // 注册接口耗时
 
 	// ──── 第三步：注册后随机延迟，再决定是否登录 ────
-	time.Sleep(randomDuration(5*time.Second, 20*time.Second))
-	if rand.Float64() > LoginRate {
+	if _, ok := loginSet[userID]; !ok {
 		return
 	}
+	time.Sleep(randomDuration(5*time.Second, 20*time.Second))
 	atomic.AddInt64(&stats.login, 1)
 	time.Sleep(randomDuration(300*time.Millisecond, 1*time.Second))
 
 	// ──── 第四步：登录后随机延迟，再决定是否充值 ────
-	time.Sleep(randomDuration(10*time.Second, 60*time.Second))
-	if rand.Float64() > RechargeRate {
+	if _, ok := rechargeSet[userID]; !ok {
 		return
 	}
+	time.Sleep(randomDuration(10*time.Second, 60*time.Second))
 	atomic.AddInt64(&stats.recharge, 1)
 	time.Sleep(randomDuration(500*time.Millisecond, 2*time.Second))
 }
 
+// dedupTail 尾部去重：去掉末尾连续相同的采样点，只保留第一个
+func dedupTail() {
+	snapshotMu.Lock()
+	defer snapshotMu.Unlock()
+
+	if len(snapshots) <= 1 {
+		return
+	}
+	last := snapshots[len(snapshots)-1]
+	i := len(snapshots) - 2
+	for i >= 0 {
+		cur := snapshots[i]
+		if cur.ArrivalsPerSec == last.ArrivalsPerSec &&
+			cur.Installing == last.Installing &&
+			cur.InstallSuccess == last.InstallSuccess &&
+			cur.InstallFail == last.InstallFail &&
+			cur.Register == last.Register &&
+			cur.Login == last.Login &&
+			cur.Recharge == last.Recharge {
+			i--
+		} else {
+			break
+		}
+	}
+	snapshots = snapshots[:i+2]
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
+
+	// 启动前精确分配目标用户
+	assignTargets(TotalUsers, TargetRegister, TargetLogin, TargetRecharge)
 
 	// 生成泊松到达时间序列
 	arrivals := generatePoissonArrivals(TotalUsers, ArrivalWindow)
@@ -166,13 +237,20 @@ func main() {
 	start := time.Now()
 
 	// ──── 监控协程：每秒采样一次快照，写入时间序列 ────
-	monitorDone := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
+				// 采样前二次检查：ctx 已取消则直接退出，避免多采一个点
+				//select {
+				//case <-ctx.Done():
+				//	return
+				//default:
+				//}
+
 				elapsed := time.Since(start).Seconds()
 				snap := Snapshot{
 					TimeSec:        math.Round(elapsed*10) / 10,
@@ -187,11 +265,12 @@ func main() {
 				snapshotMu.Lock()
 				snapshots = append(snapshots, snap)
 				snapshotMu.Unlock()
-				// 控制台打印简要状态（CSV是完整记录）
-				fmt.Printf("[%5.1fs] 安装并发:%3d | 成功:%4d | 注册:%3d | 登录:%3d | 充值:%3d\n",
-					snap.TimeSec, snap.Installing, snap.InstallSuccess,
-					snap.Register, snap.Login, snap.Recharge)
-			case <-monitorDone:
+
+				// 控制台显示 "当前/目标"
+				fmt.Printf("[%5.1fs] 到达:%3d/s | 安装并发:%3d | 成功:%4d | 注册:%3d/%d | 登录:%2d/%d | 充值:%2d/%d\n",
+					snap.TimeSec, snap.ArrivalsPerSec, snap.Installing, snap.InstallSuccess,
+					snap.Register, TargetRegister, snap.Login, TargetLogin, snap.Recharge, TargetRecharge)
+			case <-ctx.Done():
 				return
 			}
 		}
@@ -204,7 +283,10 @@ func main() {
 	}
 
 	wg.Wait()
-	close(monitorDone)
+	cancel() // 所有用户完成后立即取消监控，精确停止
+
+	// 尾部去重（兜底：即使 ctx 竞态多采了一个点，也会被去掉）
+	dedupTail()
 
 	// ──── 写入时间序列CSV ────
 	file, err := os.Create(CSVFile)
@@ -218,14 +300,14 @@ func main() {
 	defer writer.Flush()
 
 	// 表头
-	writer.Write([]string{
+	_ = writer.Write([]string{
 		"time_seconds", "arrivals_per_sec", "installing_concurrent", "install_success", "install_fail",
 		"register", "login", "recharge",
 	})
 
 	snapshotMu.Lock()
 	for _, s := range snapshots {
-		writer.Write([]string{
+		_ = writer.Write([]string{
 			strconv.FormatFloat(s.TimeSec, 'f', 1, 64),
 			strconv.FormatInt(s.ArrivalsPerSec, 10),
 			strconv.FormatInt(s.Installing, 10),
@@ -251,12 +333,9 @@ func main() {
 		stats.installSuccess, float64(stats.installSuccess)/TotalUsers*100)
 	fmt.Printf("安装失败:       %d  (%.1f%%)\n",
 		stats.installFail, float64(stats.installFail)/TotalUsers*100)
-	fmt.Printf("注册用户:       %d  (%.1f%%)  [目标约100]\n",
-		stats.register, float64(stats.register)/TotalUsers*100)
-	fmt.Printf("登录用户:       %d  (%.1f%%)  [目标约50]\n",
-		stats.login, float64(stats.login)/TotalUsers*100)
-	fmt.Printf("充值用户:       %d  (%.1f%%)  [目标约30]\n",
-		stats.recharge, float64(stats.recharge)/TotalUsers*100)
+	fmt.Printf("注册用户:       %d / %d（精确目标 ✓）\n", stats.register, TargetRegister)
+	fmt.Printf("登录用户:       %d / %d（精确目标 ✓）\n", stats.login, TargetLogin)
+	fmt.Printf("充值用户:       %d / %d（精确目标 ✓）\n", stats.recharge, TargetRecharge)
 	println("==========================================")
 	fmt.Printf("总耗时: %v\n", elapsed)
 	fmt.Printf("时间序列CSV: %s（共%d个采样点）\n", CSVFile, len(snapshots))
