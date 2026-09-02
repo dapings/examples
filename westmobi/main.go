@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	TotalUsers    = 1000            // 模拟总人数
-	ArrivalWindow = 60 * time.Hour  // 用户随机到达的时间窗口
-	InstallMin    = 2 * time.Second // 安装最短耗时
-	InstallMax    = 8 * time.Second // 安装最长耗时
+	TotalUsers    = 1000              // 模拟总人数
+	ArrivalWindow = 120 * time.Second // 用户随机到达的时间窗口
+	InstallMin    = 2 * time.Second   // 安装最短耗时
+	InstallMax    = 8 * time.Second   // 安装最长耗时
 
 	InstallRate  = 1.00 // 安装成功率
 	RegisterRate = 0.10 // 安装后注册概率（目标约100人）
