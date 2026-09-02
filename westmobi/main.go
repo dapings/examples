@@ -30,17 +30,21 @@ const (
 
 // ========== 全局统计 ==========
 var stats struct {
+	arrivalsThisSec int64 // 每秒到达计数（监控协程采样时读取并重置）
+
 	installing     int64 // 当前正在安装的并发数（实时）
 	installSuccess int64
 	installFail    int64
-	register       int64 // 注册
-	login          int64 // 登录
-	recharge       int64 // 充值
+
+	register int64 // 注册
+	login    int64 // 登录
+	recharge int64 // 充值
 }
 
 // Snapshot 每秒快照，用于写入CSV
 type Snapshot struct {
-	TimeSec float64
+	TimeSec        float64
+	ArrivalsPerSec int64 // 每秒新增到达数
 
 	Installing     int64
 	InstallSuccess int64
@@ -104,6 +108,9 @@ func simulateUser(userID int, arrival time.Duration, wg *sync.WaitGroup, sem cha
 
 	// 等待到达时间
 	time.Sleep(arrival)
+
+	// ★ 到达计数：记录该用户在这一秒到达
+	atomic.AddInt64(&stats.arrivalsThisSec, 1)
 
 	// ──── 第一步：安装（受并发信号量控制）────
 	sem <- struct{}{} // 获取安装槽位
@@ -169,6 +176,7 @@ func main() {
 				elapsed := time.Since(start).Seconds()
 				snap := Snapshot{
 					TimeSec:        math.Round(elapsed*10) / 10,
+					ArrivalsPerSec: atomic.SwapInt64(&stats.arrivalsThisSec, 0), // ★ 读取并重置
 					Installing:     atomic.LoadInt64(&stats.installing),
 					InstallSuccess: atomic.LoadInt64(&stats.installSuccess),
 					InstallFail:    atomic.LoadInt64(&stats.installFail),
@@ -211,7 +219,7 @@ func main() {
 
 	// 表头
 	writer.Write([]string{
-		"time_seconds", "installing_concurrent", "install_success", "install_fail",
+		"time_seconds", "arrivals_per_sec", "installing_concurrent", "install_success", "install_fail",
 		"register", "login", "recharge",
 	})
 
@@ -219,6 +227,7 @@ func main() {
 	for _, s := range snapshots {
 		writer.Write([]string{
 			strconv.FormatFloat(s.TimeSec, 'f', 1, 64),
+			strconv.FormatInt(s.ArrivalsPerSec, 10),
 			strconv.FormatInt(s.Installing, 10),
 			strconv.FormatInt(s.InstallSuccess, 10),
 			strconv.FormatInt(s.InstallFail, 10),
