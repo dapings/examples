@@ -1,8 +1,12 @@
 package main
 
 import (
+	"encoding/csv"
 	"fmt"
+	"math"
 	"math/rand"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +24,8 @@ const (
 	RechargeRate = 0.60 // 登录后充值概率（目标约30人）
 
 	MaxConcurrent = 100 // 最大同时安装并发数，真实服务器有承载上限，用带缓冲 channel 做并发闸门，超过 100 个安装请求会排队等待，避免瞬时打爆下游
+
+	CSVFile = "concurrency_timeseries.csv" // 输出的时间序列CSV
 )
 
 // ========== 全局统计 ==========
@@ -32,6 +38,24 @@ var stats struct {
 	recharge       int64 // 充值
 }
 
+// Snapshot 每秒快照，用于写入CSV
+type Snapshot struct {
+	TimeSec float64
+
+	Installing     int64
+	InstallSuccess int64
+	InstallFail    int64
+
+	Register int64 // 注册
+	Login    int64 // 登录
+	Recharge int64 // 充值
+}
+
+var (
+	snapshots  []Snapshot
+	snapshotMu sync.Mutex
+)
+
 // randomDuration 返回 [min, max) 之间的随机时长
 func randomDuration(min, max time.Duration) time.Duration {
 	if max <= min {
@@ -41,13 +65,45 @@ func randomDuration(min, max time.Duration) time.Duration {
 	return min + time.Duration(rand.Int63n(int64(max-min)))
 }
 
-// simulateUser 模拟单个用户从到达 → 安装 → 注册 → 登录 → 充值的完整路径
-func simulateUser(userID int, wg *sync.WaitGroup, sem chan struct{}) {
+// generatePoissonArrivals 生成服从泊松到达分布的 n 个到达时间
+//
+// 原理：
+//  1. 泊松过程的到达间隔服从指数分布：interval = -ln(U) / λ
+//  2. λ = n / windowSeconds（平均到达率）
+//  3. 累加间隔得到原始到达时间
+//  4. 归一化缩放到 [0, window]，保证 n 个用户全部在窗口内到达
+//     （缩放保持了间隔的相对分布形态，即前疏后密的泊松特征）
+func generatePoissonArrivals(n int, window time.Duration) []time.Duration {
+	arrivals := make([]time.Duration, n)
+	lambda := float64(n) / window.Seconds() // 平均到达率（人/秒）
+
+	var cumulative float64
+	for i := 0; i < n; i++ {
+		u := rand.Float64()
+		if u < 1e-9 {
+			u = 1e-9 // 避免 ln(0)
+		}
+		interval := -math.Log(u) / lambda // 指数分布采样
+		cumulative += interval
+		arrivals[i] = time.Duration(cumulative * float64(time.Second))
+	}
+
+	// 归一化缩放到窗口内，保证最后一个用户恰好在窗口末尾附近到达
+	if arrivals[n-1] > 0 {
+		scale := float64(window) / float64(arrivals[n-1])
+		for i := range arrivals {
+			arrivals[i] = time.Duration(float64(arrivals[i]) * scale)
+		}
+	}
+	return arrivals
+}
+
+// simulateUser 模拟单个用户从到达 → 安装 → 注册 → 登录 → 充值
+func simulateUser(userID int, arrival time.Duration, wg *sync.WaitGroup, sem chan struct{}) {
 	defer wg.Done()
 
-	// ──── 第0步：随机延迟到达（在时间窗口内随机开始）────
-	arrivalDelay := time.Duration(rand.Int63n(int64(ArrivalWindow)))
-	time.Sleep(arrivalDelay)
+	// 等待到达时间
+	time.Sleep(arrival)
 
 	// ──── 第一步：安装（受并发信号量控制）────
 	sem <- struct{}{} // 获取安装槽位
@@ -94,38 +150,92 @@ func simulateUser(userID int, wg *sync.WaitGroup, sem chan struct{}) {
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
+	// 生成泊松到达时间序列
+	arrivals := generatePoissonArrivals(TotalUsers, ArrivalWindow)
+
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, MaxConcurrent) // 并发控制信号量
+	sem := make(chan struct{}, MaxConcurrent)
 
 	start := time.Now()
 
-	// 立即启动1000个goroutine，每个内部先随机sleep再到达
-	for i := 0; i < TotalUsers; i++ {
-		wg.Add(1)
-		go simulateUser(i, &wg, sem)
-	}
-
-	// ──── 实时监控：每秒打印当前安装并发数 ────
+	// ──── 监控协程：每秒采样一次快照，写入时间序列 ────
+	monitorDone := make(chan struct{})
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			elapsed := time.Since(start).Seconds()
-			inst := atomic.LoadInt64(&stats.installing)
-			succ := atomic.LoadInt64(&stats.installSuccess)
-			fail := atomic.LoadInt64(&stats.installFail)
-			fmt.Printf("[%5.1fs] 安装并发: %3d | 累计成功: %4d | 累计失败: %3d\n",
-				elapsed, inst, succ, fail)
+		for {
+			select {
+			case <-ticker.C:
+				elapsed := time.Since(start).Seconds()
+				snap := Snapshot{
+					TimeSec:        math.Round(elapsed*10) / 10,
+					Installing:     atomic.LoadInt64(&stats.installing),
+					InstallSuccess: atomic.LoadInt64(&stats.installSuccess),
+					InstallFail:    atomic.LoadInt64(&stats.installFail),
+					Register:       atomic.LoadInt64(&stats.register),
+					Login:          atomic.LoadInt64(&stats.login),
+					Recharge:       atomic.LoadInt64(&stats.recharge),
+				}
+				snapshotMu.Lock()
+				snapshots = append(snapshots, snap)
+				snapshotMu.Unlock()
+				// 控制台打印简要状态（CSV是完整记录）
+				fmt.Printf("[%5.1fs] 安装并发:%3d | 成功:%4d | 注册:%3d | 登录:%3d | 充值:%3d\n",
+					snap.TimeSec, snap.Installing, snap.InstallSuccess,
+					snap.Register, snap.Login, snap.Recharge)
+			case <-monitorDone:
+				return
+			}
 		}
 	}()
 
-	wg.Wait() // 等待所有用户完成全部行为
+	// 启动1000个用户
+	for i := 0; i < TotalUsers; i++ {
+		wg.Add(1)
+		go simulateUser(i, arrivals[i], &wg, sem)
+	}
+
+	wg.Wait()
+	close(monitorDone)
+
+	// ──── 写入时间序列CSV ────
+	file, err := os.Create(CSVFile)
+	if err != nil {
+		fmt.Printf("\n创建CSV文件失败: %v\n", err)
+		return
+	}
+	defer file.Close()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	// 表头
+	writer.Write([]string{
+		"time_seconds", "installing_concurrent", "install_success", "install_fail",
+		"register", "login", "recharge",
+	})
+
+	snapshotMu.Lock()
+	for _, s := range snapshots {
+		writer.Write([]string{
+			strconv.FormatFloat(s.TimeSec, 'f', 1, 64),
+			strconv.FormatInt(s.Installing, 10),
+			strconv.FormatInt(s.InstallSuccess, 10),
+			strconv.FormatInt(s.InstallFail, 10),
+			strconv.FormatInt(s.Register, 10),
+			strconv.FormatInt(s.Login, 10),
+			strconv.FormatInt(s.Recharge, 10),
+		})
+	}
+	snapshotMu.Unlock()
+
 	elapsed := time.Since(start)
 
 	// ========== 最终结果 ==========
 	println("\n========== 广告转化模拟结果 ==========")
 	fmt.Printf("时间窗口内模拟的总用户数:       %d\n", TotalUsers)
-	fmt.Printf("到达窗口:       %v（用户随机到达）\n", ArrivalWindow)
+	fmt.Printf("到达模型:       泊松分布（λ=%.2f人/秒，窗口%v）\n",
+		float64(TotalUsers)/ArrivalWindow.Seconds(), ArrivalWindow)
 	fmt.Printf("安装耗时范围:   %v ~ %v\n", InstallMin, InstallMax)
 	fmt.Printf("最大并发安装:   %d\n", MaxConcurrent)
 	fmt.Printf("安装成功:       %d  (%.1f%%)\n",
@@ -140,4 +250,5 @@ func main() {
 		stats.recharge, float64(stats.recharge)/TotalUsers*100)
 	println("==========================================")
 	fmt.Printf("总耗时: %v\n", elapsed)
+	fmt.Printf("时间序列CSV: %s（共%d个采样点）\n", CSVFile, len(snapshots))
 }
